@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
@@ -7,6 +7,7 @@
   <meta name="description" content="Real-time vendor spend, payments and pending balances dashboard for JAPA Global 2026. Track 116 suppliers, outstanding balances, and payment statuses." />
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/lucide@0.417.0/dist/umd/lucide.min.js"></script>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
@@ -260,8 +261,13 @@
 </div>
 <script>
 const CK='japa_suppliers_cache',UK='japa_onedrive_url',PS=20;
-const DU="https://1drv.ms/x/c/b750e9ddb4b03ccf/IQBOPBrUVbipSrm0mYI9GxLaAT6NpZPzqLyd7HVYrNjTtxc?e=ml78jA&download=1";
-let ONEDRIVE_CSV_URL=localStorage.getItem(UK)||DU;
+const DU="https://1drv.ms/x/c/b750e9ddb4b03ccf/IQROPBrUVbipSrm0mYI9GxLaAYEstguxy_U5EDf55zibvgw?download=1";
+let savedUrl=localStorage.getItem(UK);
+if(savedUrl&&(savedUrl.includes('IQBOPBrUVbipSrm0mYI9GxLaAT6NpZPzqLyd7HVYrNjTtxc')||!savedUrl.includes('download=1'))){
+  savedUrl=DU;localStorage.setItem(UK,DU);
+}
+let ONEDRIVE_URL=savedUrl||DU;
+let ONEDRIVE_CSV_URL=ONEDRIVE_URL;
 let allS=[],filtS=[],curP=1,sCol=-1,sAsc=true,chart=null;
 
 function php(v){if(isNaN(v)||v==null)return'\u20B10.00';return'\u20B1'+Number(v).toLocaleString('en-PH',{minimumFractionDigits:2,maximumFractionDigits:2});}
@@ -441,7 +447,7 @@ function openDetail(id){
     <div class="mt-2"><div class="flex justify-between text-xs text-slate-500 mb-1"><span>Payment Progress</span><span>${pct}%</span></div><div class="w-full bg-slate-100 rounded-full h-3"><div class="h-3 rounded-full bg-gradient-to-r from-emerald-400 to-emerald-600" style="width:${pct}%"></div></div></div>
     <div class="flex items-center gap-2 mt-2"><span class="text-xs font-semibold text-slate-500">Status:</span><span class="inline-block text-xs font-bold px-2.5 py-1 rounded-full ${x.st==='Up to Date'?'bu':'bp'}">${esc(x.st)}</span></div>
     ${x.po?`<div class="bg-slate-50 rounded-xl p-3 mt-1"><p class="text-xs text-slate-400 mb-0.5">PO Reference</p><p class="font-mono text-slate-700 text-xs">${esc(x.po)}</p></div>`:''}
-    <a href="${ONEDRIVE_CSV_URL.split('&download=1')[0]}" target="_blank" rel="noopener" class="flex items-center gap-2 mt-2 text-xs text-blue-600 hover:underline font-semibold">
+    <a href="${ONEDRIVE_URL.split('&download=1')[0]}" target="_blank" rel="noopener" class="flex items-center gap-2 mt-2 text-xs text-blue-600 hover:underline font-semibold">
       <i data-lucide="external-link" class="w-3.5 h-3.5"></i> View OneDrive Ledger
     </a>`;
   document.getElementById('detail-modal').classList.remove('hidden');
@@ -449,9 +455,9 @@ function openDetail(id){
 }
 function closeDetail(){document.getElementById('detail-modal').classList.add('hidden');}
 
-function openSettings(){document.getElementById('settings-url-input').value=ONEDRIVE_CSV_URL;document.getElementById('settings-modal').classList.remove('hidden');}
+function openSettings(){document.getElementById('settings-url-input').value=ONEDRIVE_URL;document.getElementById('settings-modal').classList.remove('hidden');}
 function closeSettings(){document.getElementById('settings-modal').classList.add('hidden');}
-function saveSettings(){const u=document.getElementById('settings-url-input').value.trim();if(u){ONEDRIVE_CSV_URL=u;localStorage.setItem(UK,u);}closeSettings();loadData(true);}
+function saveSettings(){const u=document.getElementById('settings-url-input').value.trim();if(u){ONEDRIVE_URL=u;ONEDRIVE_CSV_URL=u;localStorage.setItem(UK,u);}closeSettings();loadData(true);}
 
 function exportCSV(){
   const h=['Supplier ID','Supplier Name','Category','Payment Terms','Total Purchases','Total Paid','Outstanding Balance','Status','PO Ref'];
@@ -614,14 +620,14 @@ async function loadData(force=false){
   }
 }
 
-// Tries local ./data.csv first, then OneDrive direct & CORS proxies, and falls back to built-in dataset
+// Fetches Excel (.xlsx) / CSV directly or via CORS proxies and parses with SheetJS
 async function fetchR(){
-  const encoded=encodeURIComponent(ONEDRIVE_CSV_URL);
+  const encoded=encodeURIComponent(ONEDRIVE_URL);
   const ATTEMPTS=[
-    {label:'Local CSV', url:'./data.csv'},
-    {label:'Direct OneDrive', url:ONEDRIVE_CSV_URL},
+    {label:'Direct OneDrive', url:ONEDRIVE_URL},
     {label:'CORSProxy', url:'https://corsproxy.io/?'+encoded},
-    {label:'AllOrigins', url:'https://api.allorigins.win/raw?url='+encoded}
+    {label:'AllOrigins', url:'https://api.allorigins.win/raw?url='+encoded},
+    {label:'Local CSV', url:'./data.csv'}
   ];
 
   let lastErr=null;
@@ -630,17 +636,29 @@ async function fetchR(){
       console.log('[JAPA] Trying fetch via: '+attempt.label);
       const resp=await fetch(attempt.url,{cache:'no-store'});
       if(!resp.ok)throw new Error(attempt.label+' HTTP '+resp.status);
-      let txt=await resp.text();
-      // Strip UTF-8 BOM if present
-      txt=txt.replace(/^\uFEFF/,'');
-      const res=Papa.parse(txt,{skipEmptyLines:true,delimiter:','});
-      const rows=res.data.filter(r=>String(r[0]||'').trim().toUpperCase().startsWith('SUP-'));
-      if(!rows.length)throw new Error(attempt.label+' returned no SUP- rows (may be HTML or empty response)');
-      allS=parse(rows);
+
+      const buffer=await resp.arrayBuffer();
+      let rows=[];
+
+      try{
+        const workbook=XLSX.read(new Uint8Array(buffer),{type:'array'});
+        const sheet=workbook.Sheets[workbook.SheetNames[0]];
+        rows=XLSX.utils.sheet_to_json(sheet,{header:1});
+      }catch(xlsxErr){
+        console.warn('[JAPA] SheetJS read error, trying text fallback:',xlsxErr.message);
+        const txt=new TextDecoder('utf-8').decode(buffer).replace(/^\uFEFF/,'');
+        const res=Papa.parse(txt,{skipEmptyLines:true,delimiter:','});
+        rows=res.data;
+      }
+
+      const supRows=rows.filter(r=>String(r[0]||'').trim().toUpperCase().startsWith('SUP-'));
+      if(!supRows.length)throw new Error(attempt.label+' returned no SUP- rows (empty or invalid sheet)');
+
+      allS=parse(supRows);
       localStorage.setItem(CK,JSON.stringify(allS));
       finish();
       document.getElementById('error-banner').classList.add('hidden');
-      const src=attempt.label==='Local CSV'?'Local data.csv':attempt.label==='Direct OneDrive'?'OneDrive live':'via '+attempt.label;
+      const src=attempt.label==='Direct OneDrive'?'OneDrive Excel (.xlsx)':attempt.label==='Local CSV'?'Local data.csv':'via '+attempt.label+' (.xlsx)';
       document.getElementById('last-updated').textContent='Last updated: '+new Date().toLocaleString('en-PH',{dateStyle:'medium',timeStyle:'short'})+' ('+src+')';
       return; // success — stop trying
     }catch(e){
@@ -649,7 +667,7 @@ async function fetchR(){
     }
   }
 
-  // If all network sources fail (e.g. file:// protocol blocks local fetch or offline), use built-in dataset:
+  // If all network sources fail (e.g. offline, or file:// protocol blocks fetch), use built-in dataset:
   useBuiltinFallback();
 }
 function finish(){
