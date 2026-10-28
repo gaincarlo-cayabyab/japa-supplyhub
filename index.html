@@ -89,7 +89,7 @@
     </button>
   </div>
 
-  <section class="grid grid-cols-2 lg:grid-cols-4 gap-4">
+  <section id="kpi-section" class="grid grid-cols-2 lg:grid-cols-4 gap-4">
     <div class="kc bg-white rounded-2xl shadow-sm border border-slate-100 p-5 flex flex-col gap-2">
       <div class="flex items-center justify-between">
         <span class="text-xs font-semibold text-slate-500 uppercase tracking-wide">Total Suppliers</span>
@@ -135,7 +135,7 @@
     </div>
   </section>
 
-  <section class="grid grid-cols-1 lg:grid-cols-3 gap-4">
+  <section id="chart-section" class="grid grid-cols-1 lg:grid-cols-3 gap-4">
     <div class="lg:col-span-2 bg-white rounded-2xl shadow-sm border border-slate-100 p-5">
       <div class="flex items-center justify-between mb-4">
         <div>
@@ -171,11 +171,35 @@
     </div>
   </section>
 
+  <div id="sheet-banner" class="hidden bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-2xl p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-sm fi">
+    <div class="flex items-center gap-3">
+      <div class="bg-blue-600 text-white rounded-xl p-2.5 shadow-sm">
+        <i data-lucide="file-spreadsheet" class="w-5 h-5"></i>
+      </div>
+      <div>
+        <div class="flex items-center gap-2">
+          <h3 id="sheet-banner-title" class="font-bold text-slate-800 text-base">Supplier Worksheet</h3>
+          <span class="text-xs bg-blue-100 text-blue-700 font-semibold px-2 py-0.5 rounded-full">Individual Tab</span>
+        </div>
+        <p id="sheet-banner-desc" class="text-xs text-slate-500">Showing full PO history, line items, dates, and payment records from this sheet</p>
+      </div>
+    </div>
+    <button onclick="switchSheet(getDefaultMasterSheet())" class="flex items-center gap-1.5 text-xs bg-white hover:bg-slate-50 text-blue-700 font-semibold px-3.5 py-2 rounded-xl border border-blue-200 shadow-sm transition">
+      <i data-lucide="arrow-left" class="w-3.5 h-3.5"></i> Back to Master Dashboard
+    </button>
+  </div>
+
   <section class="bg-white rounded-2xl shadow-sm border border-slate-100 p-4 np">
     <div class="flex flex-col sm:flex-row gap-3 items-start sm:items-center">
       <div class="relative flex-1 min-w-0">
         <i data-lucide="search" class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none"></i>
         <input id="search-input" type="search" placeholder="Search supplier name, ID, or PO ref..." class="w-full pl-9 pr-4 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-transparent transition" oninput="applyFilters()" />
+      </div>
+      <div class="flex items-center gap-2 min-w-[210px]">
+        <label for="sheet-selector" class="text-xs font-semibold text-slate-500 whitespace-nowrap hidden sm:inline"><i data-lucide="layers" class="w-3.5 h-3.5 inline mr-1 text-blue-600"></i>Tab:</label>
+        <select id="sheet-selector" class="w-full py-2.5 px-3 rounded-xl border border-blue-200 text-sm font-semibold text-blue-900 focus:outline-none focus:ring-2 focus:ring-blue-400 transition bg-blue-50/50" onchange="switchSheet(this.value)">
+          <option value="Master Dashboard">Master Dashboard</option>
+        </select>
       </div>
       <select id="filter-category" class="py-2.5 px-3 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400 transition bg-white min-w-[180px]" onchange="applyFilters()">
         <option value="">All Categories</option>
@@ -192,7 +216,7 @@
   <section class="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
     <div class="overflow-x-auto">
       <table class="w-full text-sm">
-        <thead>
+        <thead id="table-head">
           <tr class="bg-slate-50 border-b border-slate-200 text-xs text-slate-500 uppercase tracking-wide">
             <th class="sh px-4 py-3 text-left" onclick="sortTable(0)">Supplier ID <i data-lucide="chevrons-up-down" class="inline w-3 h-3 ml-0.5 opacity-40"></i></th>
             <th class="sh px-4 py-3 text-left" onclick="sortTable(1)">Supplier Name <i data-lucide="chevrons-up-down" class="inline w-3 h-3 ml-0.5 opacity-40"></i></th>
@@ -273,6 +297,9 @@ if(savedUrl&&(savedUrl.includes('IQBOPBrUVbipSrm0mYI9GxLaAT6NpZPzqLyd7HVYrNjTtxc
 let ONEDRIVE_URL=savedUrl||DU;
 let ONEDRIVE_CSV_URL=ONEDRIVE_URL;
 let allS=[],filtS=[],curP=1,sCol=-1,sAsc=true,chart=null;
+window.workbookSheets={};
+let currentSheet='Master Dashboard';
+let sheetCol=-1,sheetAsc=true;
 
 function php(v){if(isNaN(v)||v==null)return'\u20B10.00';return'\u20B1'+Number(v).toLocaleString('en-PH',{minimumFractionDigits:2,maximumFractionDigits:2});}
 function cn(v){if(v==null)return 0;return parseFloat(String(v).replace(/[^\d.-]/g,''))||0;}
@@ -373,7 +400,229 @@ function populateCats(s){
   document.getElementById('filter-category').innerHTML='<option value="">All Categories</option>'+cats.map(c=>`<option value="${esc(c)}">${esc(c)}</option>`).join('');
 }
 
+function detectSheetHeaderAndRows(rawRows){
+  if(!rawRows||!rawRows.length)return{headers:[],rows:[]};
+  let headerIdx=-1;
+  for(let i=0;i<Math.min(rawRows.length,12);i++){
+    const r=rawRows[i];
+    if(!Array.isArray(r))continue;
+    const nonEmpties=r.filter(c=>c!==undefined&&c!==null&&String(c).trim()!=='');
+    if(nonEmpties.length>=2){headerIdx=i;break;}
+  }
+  if(headerIdx===-1)headerIdx=0;
+
+  const rawH=rawRows[headerIdx]||[];
+  let maxCols=rawH.length;
+  for(let i=headerIdx;i<rawRows.length;i++){
+    if(Array.isArray(rawRows[i])&&rawRows[i].length>maxCols)maxCols=rawRows[i].length;
+  }
+
+  const headers=[];
+  for(let c=0;c<maxCols;c++){
+    const val=rawH[c];
+    if(val!==undefined&&val!==null&&String(val).trim()!==''){headers.push(String(val).trim());}
+    else{headers.push('Column '+(c+1));}
+  }
+
+  const rows=[];
+  for(let i=headerIdx+1;i<rawRows.length;i++){
+    const r=rawRows[i];
+    if(!Array.isArray(r))continue;
+    if(r.some(c=>c!==undefined&&c!==null&&String(c).trim()!=='')){
+      const norm=[];
+      for(let c=0;c<maxCols;c++)norm.push(r[c]!==undefined?r[c]:'');
+      rows.push(norm);
+    }
+  }
+  return{headers,rows};
+}
+
+function getDefaultMasterSheet(){
+  const names=Object.keys(window.workbookSheets||{});
+  if(!names.length)return'Master Dashboard';
+  const m=names.find(n=>/master|all\s*combined|summary/i.test(n));
+  if(m)return m;
+  const s=names.find(n=>(window.workbookSheets[n]||[]).some(r=>String(r[0]||'').toUpperCase().startsWith('SUP-')));
+  if(s)return s;
+  return names[0];
+}
+
+function isMasterSheet(name){
+  if(!name||name==='Master Dashboard'||name==='All Combined')return true;
+  const names=Object.keys(window.workbookSheets||{});
+  if(!names.length)return true;
+  return name===getDefaultMasterSheet();
+}
+
+function populateSheetSelector(){
+  const sel=document.getElementById('sheet-selector');
+  if(!sel)return;
+  const names=Object.keys(window.workbookSheets||{});
+  if(!names.length){
+    sel.innerHTML='<option value="Master Dashboard">Master Dashboard</option>';
+    currentSheet='Master Dashboard';
+    sel.value=currentSheet;
+    return;
+  }
+
+  const def=getDefaultMasterSheet();
+  if(!currentSheet||!names.includes(currentSheet))currentSheet=def;
+
+  sel.innerHTML=names.map(name=>{
+    const isDef=name===def;
+    const label=isDef&&!/master/i.test(name)?`${name} (Master)`:name;
+    return`<option value="${esc(name)}">${esc(label)}</option>`;
+  }).join('');
+  sel.value=currentSheet;
+}
+
+function switchSheet(sheetName){
+  currentSheet=sheetName;
+  const sel=document.getElementById('sheet-selector');
+  if(sel&&sel.value!==sheetName)sel.value=sheetName;
+
+  curP=1;sheetCol=-1;sheetAsc=true;
+
+  const isMaster=isMasterSheet(sheetName);
+  const kpiSec=document.getElementById('kpi-section');
+  const alertSec=document.getElementById('alert-section');
+  const chartSec=document.getElementById('chart-section');
+  const sheetBanner=document.getElementById('sheet-banner');
+  const catFilter=document.getElementById('filter-category');
+  const statusFilter=document.getElementById('filter-status');
+  const searchInput=document.getElementById('search-input');
+
+  if(isMaster){
+    if(kpiSec)kpiSec.classList.remove('hidden');
+    renderAlerts(allS);
+    if(chartSec)chartSec.classList.remove('hidden');
+    if(sheetBanner)sheetBanner.classList.add('hidden');
+    if(catFilter){catFilter.classList.remove('hidden');catFilter.disabled=false;}
+    if(statusFilter){statusFilter.classList.remove('hidden');statusFilter.disabled=false;}
+    if(searchInput)searchInput.placeholder="Search supplier name, ID, or PO ref...";
+
+    document.getElementById('table-head').innerHTML=`
+      <tr class="bg-slate-50 border-b border-slate-200 text-xs text-slate-500 uppercase tracking-wide">
+        <th class="sh px-4 py-3 text-left" onclick="sortTable(0)">Supplier ID <i data-lucide="chevrons-up-down" class="inline w-3 h-3 ml-0.5 opacity-40"></i></th>
+        <th class="sh px-4 py-3 text-left" onclick="sortTable(1)">Supplier Name <i data-lucide="chevrons-up-down" class="inline w-3 h-3 ml-0.5 opacity-40"></i></th>
+        <th class="px-4 py-3 text-left hidden md:table-cell">Category</th>
+        <th class="px-4 py-3 text-left hidden lg:table-cell">Terms</th>
+        <th class="sh px-4 py-3 text-right" onclick="sortTable(4)">Purchases <i data-lucide="chevrons-up-down" class="inline w-3 h-3 ml-0.5 opacity-40"></i></th>
+        <th class="sh px-4 py-3 text-right hidden sm:table-cell" onclick="sortTable(5)">Paid <i data-lucide="chevrons-up-down" class="inline w-3 h-3 ml-0.5 opacity-40"></i></th>
+        <th class="sh px-4 py-3 text-right" onclick="sortTable(6)">Balance <i data-lucide="chevrons-up-down" class="inline w-3 h-3 ml-0.5 opacity-40"></i></th>
+        <th class="px-4 py-3 text-center">Status</th>
+        <th class="px-4 py-3 text-center np">Actions</th>
+      </tr>
+    `;
+    applyFilters();
+  }else{
+    if(kpiSec)kpiSec.classList.add('hidden');
+    if(alertSec)alertSec.classList.add('hidden');
+    if(chartSec)chartSec.classList.add('hidden');
+    if(sheetBanner){
+      sheetBanner.classList.remove('hidden');
+      document.getElementById('sheet-banner-title').textContent=sheetName;
+      document.getElementById('sheet-banner-desc').textContent=`Showing full PO history, line items, dates, and payment records from "${sheetName}"`;
+    }
+    if(catFilter){catFilter.classList.add('hidden');catFilter.disabled=true;}
+    if(statusFilter){statusFilter.classList.add('hidden');statusFilter.disabled=true;}
+    if(searchInput)searchInput.placeholder=`Search in ${sheetName}...`;
+
+    renderCustomSheetTable();
+  }
+  lucide.createIcons();
+}
+
+function renderCustomSheetTable(){
+  const raw=(window.workbookSheets&&window.workbookSheets[currentSheet])||[];
+  const {headers,rows}=detectSheetHeaderAndRows(raw);
+  const thead=document.getElementById('table-head');
+  const tbody=document.getElementById('table-body');
+
+  thead.innerHTML=`
+    <tr class="bg-slate-50 border-b border-slate-200 text-xs text-slate-500 uppercase tracking-wide">
+      ${headers.map((h,i)=>`
+        <th class="sh px-4 py-3 text-left whitespace-nowrap" onclick="sortSheetTable(${i})">
+          ${esc(h)} <i data-lucide="chevrons-up-down" class="inline w-3 h-3 ml-0.5 opacity-40"></i>
+        </th>
+      `).join('')}
+    </tr>
+  `;
+
+  const q=document.getElementById('search-input').value.trim().toLowerCase();
+  let filtRows=rows.filter(r=>!q||r.some(c=>String(c!==undefined&&c!==null?c:'').toLowerCase().includes(q)));
+
+  if(sheetCol>=0&&sheetCol<headers.length){
+    filtRows.sort((a,b)=>{
+      let va=a[sheetCol],vb=b[sheetCol];
+      let na=parseFloat(String(va).replace(/[^\d.-]/g,'')),nb=parseFloat(String(vb).replace(/[^\d.-]/g,''));
+      if(!isNaN(na)&&!isNaN(nb))return sheetAsc?na-nb:nb-na;
+      return sheetAsc?String(va||'').localeCompare(String(vb||'')):String(vb||'').localeCompare(String(va||''));
+    });
+  }
+
+  const total=filtRows.length;
+  const maxP=Math.max(1,Math.ceil(total/PS));
+  if(curP>maxP)curP=maxP;
+  const st=(curP-1)*PS,en=Math.min(st+PS,total),page=filtRows.slice(st,en);
+
+  document.getElementById('row-count').textContent=total+' record'+(total!==1?'s':'');
+  document.getElementById('table-footer-info').textContent='Showing '+(total?st+1:0)+'\u2013'+en+' of '+total+' records in '+currentSheet;
+  document.getElementById('page-indicator').textContent='Page '+curP+' / '+maxP;
+  document.getElementById('btn-prev').disabled=curP<=1;
+  document.getElementById('btn-next').disabled=curP>=maxP;
+
+  if(!page.length){
+    tbody.innerHTML=`<tr><td colspan="${Math.max(1,headers.length)}" class="px-4 py-12 text-center text-slate-400 text-sm">No records found in "${esc(currentSheet)}".</td></tr>`;
+    lucide.createIcons();
+    return;
+  }
+
+  tbody.innerHTML=page.map((r,i)=>{
+    const stripe=(st+i)%2===0?'bg-white':'bg-slate-50/60';
+    return`<tr class="${stripe} border-b border-slate-100 hover:bg-blue-50/40 transition">
+      ${r.map((cell,cIdx)=>{
+        const valStr=String(cell!==undefined&&cell!==null?cell:'').trim();
+        if(['up to date','paid'].includes(valStr.toLowerCase())){
+          return`<td class="px-4 py-3 text-center whitespace-nowrap"><span class="inline-block text-xs font-semibold px-2.5 py-0.5 rounded-full bu">${esc(valStr)}</span></td>`;
+        }
+        if(['terms / pending','pending','unpaid','overdue'].includes(valStr.toLowerCase())){
+          return`<td class="px-4 py-3 text-center whitespace-nowrap"><span class="inline-block text-xs font-semibold px-2.5 py-0.5 rounded-full bp">${esc(valStr)}</span></td>`;
+        }
+        const cleanNum=parseFloat(valStr.replace(/[^\d.-]/g,''));
+        const isNumeric=valStr!==''&&!isNaN(cleanNum)&&!/^0\d+/.test(valStr);
+        const headerName=(headers[cIdx]||'').toLowerCase();
+        const isAmountHeader=headerName.includes('amount')||headerName.includes('purchases')||headerName.includes('paid')||headerName.includes('balance')||headerName.includes('price')||headerName.includes('total')||headerName.includes('credit')||headerName.includes('debit');
+
+        if(isNumeric&&isAmountHeader){
+          return`<td class="px-4 py-3 text-right font-medium whitespace-nowrap text-slate-700">${php(cleanNum)}</td>`;
+        }
+        if(isNumeric){
+          return`<td class="px-4 py-3 text-right font-mono text-xs whitespace-nowrap text-slate-600">${valStr}</td>`;
+        }
+        if(/^PO[-_0-9A-Z]/i.test(valStr)){
+          return`<td class="px-4 py-3 font-mono text-xs font-semibold text-blue-700 whitespace-nowrap">${esc(valStr)}</td>`;
+        }
+        return`<td class="px-4 py-3 text-slate-700 text-xs">${esc(valStr)}</td>`;
+      }).join('')}
+    </tr>`;
+  }).join('');
+  lucide.createIcons();
+}
+
+function sortSheetTable(colIdx){
+  if(sheetCol===colIdx)sheetAsc=!sheetAsc;
+  else{sheetCol=colIdx;sheetAsc=true;}
+  curP=1;
+  renderCustomSheetTable();
+}
+
 function applyFilters(){
+  if(!isMasterSheet(currentSheet)){
+    curP=1;
+    renderCustomSheetTable();
+    return;
+  }
   const q=document.getElementById('search-input').value.trim().toLowerCase();
   const cat=document.getElementById('filter-category').value.toLowerCase();
   const st=document.getElementById('filter-status').value.toLowerCase();
@@ -405,7 +654,7 @@ function renderTable(){
   if(curP>maxP)curP=maxP;
   const st=(curP-1)*PS,en=Math.min(st+PS,total),page=filtS.slice(st,en);
   document.getElementById('row-count').textContent=total+' supplier'+(total!==1?'s':'');
-  document.getElementById('table-footer-info').textContent='Showing '+(st+1)+'\u2013'+en+' of '+total+' suppliers';
+  document.getElementById('table-footer-info').textContent='Showing '+(total?st+1:0)+'\u2013'+en+' of '+total+' suppliers';
   document.getElementById('page-indicator').textContent='Page '+curP+' / '+maxP;
   document.getElementById('btn-prev').disabled=curP<=1;
   document.getElementById('btn-next').disabled=curP>=maxP;
@@ -429,14 +678,42 @@ function renderTable(){
   lucide.createIcons();
 }
 
-function prevPage(){if(curP>1){curP--;renderTable();}}
-function nextPage(){const m=Math.ceil(filtS.length/PS);if(curP<m){curP++;renderTable();}}
+function prevPage(){
+  if(curP>1){
+    curP--;
+    if(isMasterSheet(currentSheet))renderTable();
+    else renderCustomSheetTable();
+  }
+}
+function nextPage(){
+  if(isMasterSheet(currentSheet)){
+    const m=Math.ceil(filtS.length/PS);
+    if(curP<m){curP++;renderTable();}
+  }else{
+    const raw=(window.workbookSheets&&window.workbookSheets[currentSheet])||[];
+    const {rows}=detectSheetHeaderAndRows(raw);
+    const q=document.getElementById('search-input').value.trim().toLowerCase();
+    const filtRows=rows.filter(r=>!q||r.some(c=>String(c!==undefined&&c!==null?c:'').toLowerCase().includes(q)));
+    const m=Math.ceil(filtRows.length/PS);
+    if(curP<m){curP++;renderCustomSheetTable();}
+  }
+}
 
 function openDetail(id){
   const x=allS.find(s=>s.id===id);if(!x)return;
   document.getElementById('detail-title').textContent=x.name;
   const pct=x.pur>0?(x.paid/x.pur*100).toFixed(1):'0.0';
   const bb=x.bal>0?'red':'emerald';
+  const matchingSheet=Object.keys(window.workbookSheets||{}).find(name=>{
+    if(isMasterSheet(name))return false;
+    const n=name.toLowerCase(),sName=x.name.toLowerCase();
+    return n.includes(x.id.toLowerCase())||sName.includes(n)||n.includes(sName.split(' ')[0]);
+  });
+  const tabBtn=matchingSheet?`
+    <button onclick="closeDetail();switchSheet('${esc(matchingSheet)}')" class="flex items-center justify-center gap-1.5 w-full mt-2 py-2 px-3 rounded-xl bg-blue-50 hover:bg-blue-100 text-blue-700 font-semibold text-xs border border-blue-200 transition">
+      <i data-lucide="layers" class="w-3.5 h-3.5"></i> Open "${esc(matchingSheet)}" Worksheet Tab &rarr;
+    </button>`:'';
+
   document.getElementById('detail-content').innerHTML=`
     <div class="grid grid-cols-2 gap-3">
       <div class="bg-slate-50 rounded-xl p-3"><p class="text-xs text-slate-400 mb-0.5">Supplier ID</p><p class="font-mono font-bold text-slate-700">${esc(x.id)}</p></div>
@@ -451,6 +728,7 @@ function openDetail(id){
     <div class="mt-2"><div class="flex justify-between text-xs text-slate-500 mb-1"><span>Payment Progress</span><span>${pct}%</span></div><div class="w-full bg-slate-100 rounded-full h-3"><div class="h-3 rounded-full bg-gradient-to-r from-emerald-400 to-emerald-600" style="width:${pct}%"></div></div></div>
     <div class="flex items-center gap-2 mt-2"><span class="text-xs font-semibold text-slate-500">Status:</span><span class="inline-block text-xs font-bold px-2.5 py-1 rounded-full ${x.st==='Up to Date'?'bu':'bp'}">${esc(x.st)}</span></div>
     ${x.po?`<div class="bg-slate-50 rounded-xl p-3 mt-1"><p class="text-xs text-slate-400 mb-0.5">PO Reference</p><p class="font-mono text-slate-700 text-xs">${esc(x.po)}</p></div>`:''}
+    ${tabBtn}
     <a href="${ONEDRIVE_URL.split('&download=1')[0]}" target="_blank" rel="noopener" class="flex items-center gap-2 mt-2 text-xs text-blue-600 hover:underline font-semibold">
       <i data-lucide="external-link" class="w-3.5 h-3.5"></i> View OneDrive Ledger
     </a>`;
@@ -464,10 +742,17 @@ function closeSettings(){document.getElementById('settings-modal').classList.add
 function saveSettings(){const u=document.getElementById('settings-url-input').value.trim();if(u){ONEDRIVE_URL=u;ONEDRIVE_CSV_URL=u;localStorage.setItem(UK,u);}closeSettings();loadData(true);}
 
 function exportCSV(){
-  const h=['Supplier ID','Supplier Name','Category','Payment Terms','Total Purchases','Total Paid','Outstanding Balance','Status','PO Ref'];
-  const rows=filtS.map(x=>[x.id,x.name,x.cat,x.terms,x.pur.toFixed(2),x.paid.toFixed(2),x.bal.toFixed(2),x.st,x.po]);
-  const csv=[h,...rows].map(r=>r.map(c=>`"${String(c).replace(/"/g,'""')}"`).join(',')).join('\r\n');
-  const a=document.createElement('a');a.href=URL.createObjectURL(new Blob(['\uFEFF'+csv],{type:'text/csv;charset=utf-8;'}));a.download='japa_suppliers_2026.csv';a.click();
+  if(isMasterSheet(currentSheet)){
+    const h=['Supplier ID','Supplier Name','Category','Payment Terms','Total Purchases','Total Paid','Outstanding Balance','Status','PO Ref'];
+    const rows=filtS.map(x=>[x.id,x.name,x.cat,x.terms,x.pur.toFixed(2),x.paid.toFixed(2),x.bal.toFixed(2),x.st,x.po]);
+    const csv=[h,...rows].map(r=>r.map(c=>`"${String(c).replace(/"/g,'""')}"`).join(',')).join('\r\n');
+    const a=document.createElement('a');a.href=URL.createObjectURL(new Blob(['\uFEFF'+csv],{type:'text/csv;charset=utf-8;'}));a.download='japa_suppliers_2026.csv';a.click();
+  }else{
+    const raw=(window.workbookSheets&&window.workbookSheets[currentSheet])||[];
+    const {headers,rows}=detectSheetHeaderAndRows(raw);
+    const csv=[headers,...rows].map(r=>r.map(c=>`"${String(c!==undefined&&c!==null?c:'').replace(/"/g,'""')}"`).join(',')).join('\r\n');
+    const a=document.createElement('a');a.href=URL.createObjectURL(new Blob(['\uFEFF'+csv],{type:'text/csv;charset=utf-8;'}));a.download=(currentSheet.replace(/[^a-z0-9_-]/gi,'_'))+'.csv';a.click();
+  }
 }
 
 function showError(msg){document.getElementById('error-detail').textContent=msg;document.getElementById('error-banner').classList.remove('hidden');lucide.createIcons();}
@@ -593,9 +878,40 @@ const BUILTIN_DATA = [
 
 
 function useBuiltinFallback(){
-  console.log('[JAPA] Using built-in fallback dataset (116 suppliers)');
+  console.log('[JAPA] Using built-in fallback dataset (116 suppliers & demo tabs)');
   allS = JSON.parse(JSON.stringify(BUILTIN_DATA));
   localStorage.setItem(CK, JSON.stringify(allS));
+
+  window.workbookSheets = {
+    'Master Dashboard': [
+      ['Supplier ID', 'Supplier Name', 'Category', 'Payment Terms', 'Total Purchases', 'Total Paid', 'Outstanding Balance', 'Status'],
+      ...BUILTIN_DATA.map(x => [x.id, x.name, x.cat, x.terms, x.pur, x.paid, x.bal, x.st, x.po])
+    ],
+    'Xarion Industries': [
+      ['PO Number', 'Date', 'Item Description', 'Qty', 'Unit Price', 'Total Amount', 'Amount Paid', 'Balance', 'Status', 'Notes'],
+      ['PO-2026-XAR01', '2026-01-10', 'Plastisol Inks Cyan/Magenta/Yellow/Black (50kg sets)', '4 sets', 32500, 130000, 0, 130000, 'Terms / Pending', '30 Days Net — Inv #XI-9941'],
+      ['PO-2026-XAR02', '2026-02-04', 'Screen Emulsion & Sensitizer 10L Drums', '6 drums', 14200, 85200, 0, 85200, 'Terms / Pending', 'Inv #XI-9988 — Stock received'],
+      ['PO-2026-XAR03', '2026-02-18', 'Specialty Gold & Silver Foil Adhesive (25kg)', '2 pails', 35611.34, 71222.68, 0, 71222.68, 'Terms / Pending', 'Inv #XI-10024 — Net 30']
+    ],
+    'Manchester Textile': [
+      ['PO Number', 'Date', 'Item Description', 'Fabric Spec', 'Quantity', 'Total Amount', 'Amount Paid', 'Balance', 'Status'],
+      ['PO-2026-MTM01', '2026-01-18', 'Cotton Combed 30s Charcoal Grey & Navy', '100% Combed Cotton', '1,200 yds', 60000, 0, 60000, 'Terms / Pending'],
+      ['PO-2026-MTM02', '2026-02-12', 'CVC 60/40 Heather Black & Optic White', 'CVC Blend 220gsm', '1,200 yds', 60000, 0, 60000, 'Terms / Pending']
+    ],
+    'Toms Int (Printstar)': [
+      ['PO Number', 'Date', 'Style & Color', 'Size Breakdown', 'Quantity (Dozens)', 'Unit Price', 'Total Amount', 'Amount Paid', 'Status'],
+      ['PO-2026-TI01', '2026-01-08', 'Printstar 085-CVT Heavyweight White', 'S:20 M:40 L:40 XL:20', 120, 1450, 174000, 174000, 'Paid'],
+      ['PO-2026-TI02', '2026-01-25', 'Printstar 085-CVT Solid Black', 'S:15 M:30 L:30 XL:15', 90, 1500, 135000, 135000, 'Paid'],
+      ['PO-2026-TI03', '2026-02-10', 'Printstar 102-CVL Long Sleeve Navy', 'M:20 L:20 XL:10', 50, 1820, 91000, 91000, 'Paid'],
+      ['PO-2026-TI04', '2026-02-22', 'Printstar Premium 5.6oz Heather Grey', 'S:10 M:25 L:25 XL:10', 70, 1600, 112000, 112000, 'Paid']
+    ],
+    'Genesis': [
+      ['PO Number', 'Date', 'Article', 'Quantity', 'Total Amount', 'Payment Date', 'Amount Paid', 'Balance', 'Status'],
+      ['PO-2026-GEN01', '2026-01-12', 'Plain Shirts Assorted Colors 180gsm', '800 pcs', 40000, '2026-02-05', 40000, 0, 'Paid'],
+      ['PO-2026-GEN02', '2026-02-14', 'Plain Shirts Special Order Round Neck', '250 pcs', 12852.50, 'Pending', 0, 12852.50, 'Terms / Pending']
+    ]
+  };
+
   finish();
   document.getElementById('error-banner').classList.add('hidden');
   document.getElementById('last-updated').textContent = 'Loaded 116 suppliers (Built-in offline dataset)';
@@ -642,20 +958,33 @@ async function fetchR(){
       if(!resp.ok)throw new Error(attempt.label+' HTTP '+resp.status);
 
       const buffer=await resp.arrayBuffer();
-      let rows=[];
+      let supRows=[];
 
       try{
         const workbook=XLSX.read(new Uint8Array(buffer),{type:'array'});
-        const sheet=workbook.Sheets[workbook.SheetNames[0]];
-        rows=XLSX.utils.sheet_to_json(sheet,{header:1});
+        window.workbookSheets={};
+        for(const name of workbook.SheetNames){
+          window.workbookSheets[name]=XLSX.utils.sheet_to_json(workbook.Sheets[name],{header:1});
+        }
+        let masterName=workbook.SheetNames.find(n=>/master|all\s*combined/i.test(n))||workbook.SheetNames[0];
+        let masterRows=window.workbookSheets[masterName]||[];
+        supRows=masterRows.filter(r=>String(r[0]||'').trim().toUpperCase().startsWith('SUP-'));
+        if(!supRows.length){
+          for(const n of workbook.SheetNames){
+            const sRows=(window.workbookSheets[n]||[]).filter(r=>String(r[0]||'').trim().toUpperCase().startsWith('SUP-'));
+            if(sRows.length>supRows.length){
+              supRows=sRows;
+            }
+          }
+        }
       }catch(xlsxErr){
         console.warn('[JAPA] SheetJS read error, trying text fallback:',xlsxErr.message);
         const txt=new TextDecoder('utf-8').decode(buffer).replace(/^\uFEFF/,'');
         const res=Papa.parse(txt,{skipEmptyLines:true,delimiter:','});
-        rows=res.data;
+        window.workbookSheets={'Master Dashboard':res.data};
+        supRows=res.data.filter(r=>String(r[0]||'').trim().toUpperCase().startsWith('SUP-'));
       }
 
-      const supRows=rows.filter(r=>String(r[0]||'').trim().toUpperCase().startsWith('SUP-'));
       if(!supRows.length)throw new Error(attempt.label+' returned no SUP- rows (empty or invalid sheet)');
 
       allS=parse(supRows);
@@ -690,26 +1019,41 @@ async function processUploadedFile(file){
   ri.classList.add('si');
   try{
     const ext=file.name.split('.').pop().toLowerCase();
-    let rows=[];
+    let supRows=[];
+
     if(ext==='csv'){
       const text=await file.text();
       const res=Papa.parse(text,{skipEmptyLines:true,delimiter:','});
-      rows=res.data;
+      window.workbookSheets={'Master Dashboard':res.data};
+      supRows=res.data.filter(r=>String(r[0]||'').trim().toUpperCase().startsWith('SUP-'));
     }else{
       const buffer=await file.arrayBuffer();
       try{
         const workbook=XLSX.read(new Uint8Array(buffer),{type:'array'});
-        const sheet=workbook.Sheets[workbook.SheetNames[0]];
-        rows=XLSX.utils.sheet_to_json(sheet,{header:1});
+        window.workbookSheets={};
+        for(const name of workbook.SheetNames){
+          window.workbookSheets[name]=XLSX.utils.sheet_to_json(workbook.Sheets[name],{header:1});
+        }
+        let masterName=workbook.SheetNames.find(n=>/master|all\s*combined/i.test(n))||workbook.SheetNames[0];
+        let masterRows=window.workbookSheets[masterName]||[];
+        supRows=masterRows.filter(r=>String(r[0]||'').trim().toUpperCase().startsWith('SUP-'));
+        if(!supRows.length){
+          for(const n of workbook.SheetNames){
+            const sRows=(window.workbookSheets[n]||[]).filter(r=>String(r[0]||'').trim().toUpperCase().startsWith('SUP-'));
+            if(sRows.length>supRows.length){
+              supRows=sRows;
+            }
+          }
+        }
       }catch(xlsxErr){
         console.warn('[JAPA] SheetJS read failed on uploaded file, trying PapaParse fallback:',xlsxErr.message);
         const text=new TextDecoder('utf-8').decode(buffer).replace(/^\uFEFF/,'');
         const res=Papa.parse(text,{skipEmptyLines:true,delimiter:','});
-        rows=res.data;
+        window.workbookSheets={'Master Dashboard':res.data};
+        supRows=res.data.filter(r=>String(r[0]||'').trim().toUpperCase().startsWith('SUP-'));
       }
     }
 
-    const supRows=rows.filter(r=>String(r[0]||'').trim().toUpperCase().startsWith('SUP-'));
     if(!supRows.length){
       showError(`Uploaded file "${file.name}" does not contain any valid supplier rows starting with SUP-.`);
       return;
@@ -720,7 +1064,7 @@ async function processUploadedFile(file){
     finish();
     document.getElementById('error-banner').classList.add('hidden');
     document.getElementById('last-updated').textContent='Loaded from Uploaded File: '+file.name;
-    console.log(`[JAPA] Successfully loaded ${allS.length} suppliers from uploaded file: ${file.name}`);
+    console.log(`[JAPA] Successfully loaded ${allS.length} suppliers across ${Object.keys(window.workbookSheets).length} tabs from: ${file.name}`);
   }catch(err){
     console.error('[JAPA] File processing error:',err);
     showError(`Error processing uploaded file "${file.name}": `+err.message);
@@ -743,8 +1087,14 @@ window.addEventListener('drop',async e=>{
 });
 
 function finish(){
+  populateSheetSelector();
   filtS=[...allS];
-  renderKPIs(allS);renderAlerts(allS);renderChart(allS);populateCats(allS);applyFilters();lucide.createIcons();
+  renderKPIs(allS);
+  renderAlerts(allS);
+  renderChart(allS);
+  populateCats(allS);
+  switchSheet(currentSheet||getDefaultMasterSheet());
+  lucide.createIcons();
 }
 
 document.getElementById('settings-modal').addEventListener('click',e=>{if(e.target===e.currentTarget)closeSettings();});
