@@ -289,12 +289,11 @@
 </div>
 <script>
 const CK='japa_suppliers_cache',UK='japa_onedrive_url',PS=20;
-const DU="https://1drv.ms/x/c/b750e9ddb4b03ccf/IQROPBrUVbipSrm0mYI9GxLaAYEstguxy_U5EDf55zibvgw?download=1";
-let savedUrl=localStorage.getItem(UK);
-if(savedUrl&&(savedUrl.includes('IQBOPBrUVbipSrm0mYI9GxLaAT6NpZPzqLyd7HVYrNjTtxc')||!savedUrl.includes('download=1'))){
-  savedUrl=DU;localStorage.setItem(UK,DU);
-}
-let ONEDRIVE_URL=savedUrl||DU;
+const RAW_ONEDRIVE_URL="https://1drv.ms/x/c/b750e9ddb4b03ccf/IQROPBrUVbipSrm0mYI9GxLaAYEstguxy_U5EDf55zibvgw?download=1";
+const DU=RAW_ONEDRIVE_URL;
+// Clear stale proxy strings / old URLs from localStorage on startup
+localStorage.removeItem(UK);
+let ONEDRIVE_URL=RAW_ONEDRIVE_URL;
 let ONEDRIVE_CSV_URL=ONEDRIVE_URL;
 let allS=[],filtS=[],curP=1,sCol=-1,sAsc=true,chart=null;
 window.workbookSheets={};
@@ -737,9 +736,23 @@ function openDetail(id){
 }
 function closeDetail(){document.getElementById('detail-modal').classList.add('hidden');}
 
-function openSettings(){document.getElementById('settings-url-input').value=ONEDRIVE_URL;document.getElementById('settings-modal').classList.remove('hidden');}
+function openSettings(){
+  const raw = ONEDRIVE_URL || RAW_ONEDRIVE_URL;
+  document.getElementById('settings-url-input').value = raw.replace(/^https?:\/\/(corsproxy\.io\/\?|api\.allorigins\.win\/raw\?url=)/i, '');
+  document.getElementById('settings-modal').classList.remove('hidden');
+}
 function closeSettings(){document.getElementById('settings-modal').classList.add('hidden');}
-function saveSettings(){const u=document.getElementById('settings-url-input').value.trim();if(u){ONEDRIVE_URL=u;ONEDRIVE_CSV_URL=u;localStorage.setItem(UK,u);}closeSettings();loadData(true);}
+function saveSettings(){
+  const u=document.getElementById('settings-url-input').value.trim();
+  if(u){
+    const clean = u.replace(/^https?:\/\/(corsproxy\.io\/\?|api\.allorigins\.win\/raw\?url=)/i, '');
+    ONEDRIVE_URL=clean;
+    ONEDRIVE_CSV_URL=clean;
+    localStorage.setItem(UK,clean);
+  }
+  closeSettings();
+  loadData(true);
+}
 
 function exportCSV(){
   if(isMasterSheet(currentSheet)){
@@ -940,62 +953,53 @@ async function loadData(force=false){
   }
 }
 
-// Fetches Excel (.xlsx) / CSV directly or via CORS proxies and parses with SheetJS
+// Fetches Live OneDrive Excel (.xlsx) directly via CORSProxy and parses with SheetJS
 async function fetchR(){
-  const encoded=encodeURIComponent(ONEDRIVE_URL);
+  const inputUrl=ONEDRIVE_URL||RAW_ONEDRIVE_URL;
+  const cleanUrl=inputUrl.replace(/^https?:\/\/(corsproxy\.io\/\?|api\.allorigins\.win\/raw\?url=)/i,'');
+
   const ATTEMPTS=[
-    {label:'Direct OneDrive', url:ONEDRIVE_URL},
-    {label:'CORSProxy', url:'https://corsproxy.io/?'+encoded},
-    {label:'AllOrigins', url:'https://api.allorigins.win/raw?url='+encoded},
-    {label:'Local CSV', url:'./data.csv'}
+    {label:'CORSProxy', url:'https://corsproxy.io/?'+encodeURIComponent(cleanUrl)},
+    {label:'AllOrigins', url:'https://api.allorigins.win/raw?url='+encodeURIComponent(cleanUrl)},
+    {label:'Direct OneDrive', url:cleanUrl}
   ];
 
   let lastErr=null;
   for(const attempt of ATTEMPTS){
     try{
-      console.log('[JAPA] Trying fetch via: '+attempt.label);
+      console.log('[JAPA] Trying live sync via: '+attempt.label);
       const resp=await fetch(attempt.url,{cache:'no-store'});
       if(!resp.ok)throw new Error(attempt.label+' HTTP '+resp.status);
 
       const buffer=await resp.arrayBuffer();
-      let supRows=[];
+      const workbook=XLSX.read(new Uint8Array(buffer),{type:'array'});
 
-      try{
-        const workbook=XLSX.read(new Uint8Array(buffer),{type:'array'});
-        window.workbookSheets={};
-        for(const name of workbook.SheetNames){
-          window.workbookSheets[name]=XLSX.utils.sheet_to_json(workbook.Sheets[name],{header:1});
-        }
-        let masterName=workbook.SheetNames.find(n=>/master|all\s*combined/i.test(n))||workbook.SheetNames[0];
-        let masterRows=window.workbookSheets[masterName]||[];
-        supRows=masterRows.filter(r=>String(r[0]||'').trim().toUpperCase().startsWith('SUP-'));
-        if(!supRows.length){
-          for(const n of workbook.SheetNames){
-            const sRows=(window.workbookSheets[n]||[]).filter(r=>String(r[0]||'').trim().toUpperCase().startsWith('SUP-'));
-            if(sRows.length>supRows.length){
-              supRows=sRows;
-            }
-          }
-        }
-      }catch(xlsxErr){
-        console.warn('[JAPA] SheetJS read error, trying text fallback:',xlsxErr.message);
-        const txt=new TextDecoder('utf-8').decode(buffer).replace(/^\uFEFF/,'');
-        const res=Papa.parse(txt,{skipEmptyLines:true,delimiter:','});
-        window.workbookSheets={'Master Dashboard':res.data};
-        supRows=res.data.filter(r=>String(r[0]||'').trim().toUpperCase().startsWith('SUP-'));
+      window.workbookSheets={};
+      for(const name of workbook.SheetNames){
+        window.workbookSheets[name]=XLSX.utils.sheet_to_json(workbook.Sheets[name],{header:1});
       }
 
-      if(!supRows.length)throw new Error(attempt.label+' returned no SUP- rows (empty or invalid sheet)');
+      let masterName=workbook.SheetNames.find(n=>/master|all\s*combined/i.test(n))||workbook.SheetNames[0];
+      let masterRows=window.workbookSheets[masterName]||[];
+      let supRows=masterRows.filter(r=>String(r[0]||'').trim().toUpperCase().startsWith('SUP-'));
+      if(!supRows.length){
+        for(const n of workbook.SheetNames){
+          const sRows=(window.workbookSheets[n]||[]).filter(r=>String(r[0]||'').trim().toUpperCase().startsWith('SUP-'));
+          if(sRows.length>supRows.length){
+            supRows=sRows;
+            masterName=n;
+          }
+        }
+      }
+
+      if(!supRows.length)throw new Error(attempt.label+' returned no valid SUP- supplier rows');
 
       allS=parse(supRows);
       localStorage.setItem(CK,JSON.stringify(allS));
       finish();
       document.getElementById('error-banner').classList.add('hidden');
-      if(attempt.label==='Local CSV'){
-        document.getElementById('last-updated').textContent='Loaded from Local data.csv';
-      }else{
-        document.getElementById('last-updated').textContent='Live Sync with OneDrive Excel';
-      }
+      document.getElementById('last-updated').textContent='Live Sync: OneDrive Excel';
+      console.log(`[JAPA] Live Sync successful! Loaded ${allS.length} suppliers across ${workbook.SheetNames.length} tabs.`);
       return; // success — stop trying
     }catch(e){
       console.warn('[JAPA] '+attempt.label+' failed:',e.message);
@@ -1003,7 +1007,7 @@ async function fetchR(){
     }
   }
 
-  // If all network sources fail (e.g. offline, or file:// protocol blocks fetch), use built-in dataset:
+  // If live network requests fail (e.g. offline, or restricted network), use built-in dataset:
   useBuiltinFallback();
 }
 
