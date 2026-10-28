@@ -2,8 +2,8 @@ name: Sync OneDrive Excel
 
 on:
   schedule:
-    - cron: '*/15 * * * *' # Automatically checks OneDrive every 15 minutes
-  workflow_dispatch:       # Allows you to trigger it manually anytime on GitHub
+    - cron: '*/15 * * * *' # Automatically runs every 15 minutes
+  workflow_dispatch:       # Allows manual trigger on GitHub
 
 jobs:
   sync:
@@ -12,9 +12,25 @@ jobs:
       - name: Checkout Repository
         uses: actions/checkout@v4
 
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.x'
+
+      - name: Install dependencies
+        run: pip install requests
+
       - name: Download Live OneDrive Excel File
         run: |
-          curl -L -s -o data.xlsx "https://1drv.ms/x/c/b750e9ddb4b03ccf/IQROPBrUVbipSrm0mYI9GxLaAYEstguxy_U5EDf55zibvgw?download=1"
+          python -c "
+          import requests
+          url = 'https://1drv.ms/x/c/b750e9ddb4b03ccf/IQROPBrUVbipSrm0mYI9GxLaAYEstguxy_U5EDf55zibvgw?download=1'
+          headers = {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)'}
+          r = requests.get(url, headers=headers, allow_redirects=True)
+          with open('data.xlsx', 'wb') as f:
+              f.write(r.content)
+          print('Downloaded file size:', len(r.content), 'bytes')
+          "
 
       - name: Commit and Push Updated File
         run: |
