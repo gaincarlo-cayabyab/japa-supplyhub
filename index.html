@@ -60,6 +60,10 @@
       <button id="btn-refresh" onclick="loadData(true)" class="flex items-center gap-1.5 bg-white/15 hover:bg-white/25 text-white text-sm font-semibold px-4 py-2 rounded-lg transition-all duration-200 border border-white/20 shadow-sm">
         <i id="icon-refresh" data-lucide="refresh-cw" class="w-4 h-4"></i> Refresh Data
       </button>
+      <label for="file-input" class="flex items-center gap-1.5 bg-white/15 hover:bg-white/25 text-white text-sm font-semibold px-4 py-2 rounded-lg transition-all duration-200 border border-white/20 shadow-sm cursor-pointer">
+        <i data-lucide="upload" class="w-4 h-4"></i> Upload File
+        <input type="file" accept=".xlsx, .xls, .csv" id="file-input" class="hidden" onchange="handleFileUpload(event)">
+      </label>
       <button onclick="exportCSV()" class="flex items-center gap-1.5 bg-white/15 hover:bg-white/25 text-white text-sm font-semibold px-4 py-2 rounded-lg transition-all duration-200 border border-white/20 shadow-sm">
         <i data-lucide="download" class="w-4 h-4"></i> Export CSV
       </button>
@@ -658,8 +662,11 @@ async function fetchR(){
       localStorage.setItem(CK,JSON.stringify(allS));
       finish();
       document.getElementById('error-banner').classList.add('hidden');
-      const src=attempt.label==='Direct OneDrive'?'OneDrive Excel (.xlsx)':attempt.label==='Local CSV'?'Local data.csv':'via '+attempt.label+' (.xlsx)';
-      document.getElementById('last-updated').textContent='Last updated: '+new Date().toLocaleString('en-PH',{dateStyle:'medium',timeStyle:'short'})+' ('+src+')';
+      if(attempt.label==='Local CSV'){
+        document.getElementById('last-updated').textContent='Loaded from Local data.csv';
+      }else{
+        document.getElementById('last-updated').textContent='Live Sync with OneDrive Excel';
+      }
       return; // success — stop trying
     }catch(e){
       console.warn('[JAPA] '+attempt.label+' failed:',e.message);
@@ -670,6 +677,71 @@ async function fetchR(){
   // If all network sources fail (e.g. offline, or file:// protocol blocks fetch), use built-in dataset:
   useBuiltinFallback();
 }
+
+async function handleFileUpload(e){
+  const file=e.target.files&&e.target.files[0];
+  if(!file)return;
+  await processUploadedFile(file);
+  e.target.value='';
+}
+
+async function processUploadedFile(file){
+  const ri=document.getElementById('icon-refresh');
+  ri.classList.add('si');
+  try{
+    const ext=file.name.split('.').pop().toLowerCase();
+    let rows=[];
+    if(ext==='csv'){
+      const text=await file.text();
+      const res=Papa.parse(text,{skipEmptyLines:true,delimiter:','});
+      rows=res.data;
+    }else{
+      const buffer=await file.arrayBuffer();
+      try{
+        const workbook=XLSX.read(new Uint8Array(buffer),{type:'array'});
+        const sheet=workbook.Sheets[workbook.SheetNames[0]];
+        rows=XLSX.utils.sheet_to_json(sheet,{header:1});
+      }catch(xlsxErr){
+        console.warn('[JAPA] SheetJS read failed on uploaded file, trying PapaParse fallback:',xlsxErr.message);
+        const text=new TextDecoder('utf-8').decode(buffer).replace(/^\uFEFF/,'');
+        const res=Papa.parse(text,{skipEmptyLines:true,delimiter:','});
+        rows=res.data;
+      }
+    }
+
+    const supRows=rows.filter(r=>String(r[0]||'').trim().toUpperCase().startsWith('SUP-'));
+    if(!supRows.length){
+      showError(`Uploaded file "${file.name}" does not contain any valid supplier rows starting with SUP-.`);
+      return;
+    }
+
+    allS=parse(supRows);
+    localStorage.setItem(CK,JSON.stringify(allS));
+    finish();
+    document.getElementById('error-banner').classList.add('hidden');
+    document.getElementById('last-updated').textContent='Loaded from Uploaded File: '+file.name;
+    console.log(`[JAPA] Successfully loaded ${allS.length} suppliers from uploaded file: ${file.name}`);
+  }catch(err){
+    console.error('[JAPA] File processing error:',err);
+    showError(`Error processing uploaded file "${file.name}": `+err.message);
+  }finally{
+    ri.classList.remove('si');
+  }
+}
+
+// Window Drag & Drop support for Excel and CSV files
+window.addEventListener('dragover',e=>{e.preventDefault();});
+window.addEventListener('drop',async e=>{
+  e.preventDefault();
+  if(e.dataTransfer&&e.dataTransfer.files&&e.dataTransfer.files.length){
+    const file=e.dataTransfer.files[0];
+    const ext=file.name.split('.').pop().toLowerCase();
+    if(['xlsx','xls','csv'].includes(ext)){
+      await processUploadedFile(file);
+    }
+  }
+});
+
 function finish(){
   filtS=[...allS];
   renderKPIs(allS);renderAlerts(allS);renderChart(allS);populateCats(allS);applyFilters();lucide.createIcons();
