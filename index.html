@@ -1,0 +1,499 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>JAPA Global — Annual Supplier Purchases Tracker 2026</title>
+  <meta name="description" content="Real-time vendor spend, payments and pending balances dashboard for JAPA Global 2026. Track 116 suppliers, outstanding balances, and payment statuses." />
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/lucide@0.417.0/dist/umd/lucide.min.js"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet" />
+  <script>
+    tailwind.config={theme:{extend:{fontFamily:{inter:['Inter','sans-serif']},colors:{brand:{50:'#eff6ff',100:'#dbeafe',200:'#bfdbfe',300:'#93c5fd',400:'#60a5fa',500:'#3b82f6',600:'#2563eb',700:'#1d4ed8',800:'#1e40af',900:'#1e3a8a'}}}}};
+  </script>
+  <style>
+    *{font-family:'Inter',sans-serif;}
+    ::-webkit-scrollbar{width:6px;height:6px;}
+    ::-webkit-scrollbar-track{background:#f1f5f9;}
+    ::-webkit-scrollbar-thumb{background:#94a3b8;border-radius:9999px;}
+    .hg{background:linear-gradient(135deg,#1e3a8a 0%,#1d4ed8 40%,#2563eb 70%,#3b82f6 100%);}
+    @keyframes shimmer{0%{background-position:-400px 0;}100%{background-position:400px 0;}}
+    .shimmer{background:linear-gradient(90deg,#f0f4ff 25%,#dbe4ff 50%,#f0f4ff 75%);background-size:800px 100%;animation:shimmer 1.4s infinite;border-radius:6px;height:1.2em;}
+    tbody tr{transition:background .15s ease;}
+    tbody tr:hover{background:#f0f6ff!important;}
+    .sh{cursor:pointer;user-select:none;}
+    .sh:hover{background:#dbeafe;}
+    @keyframes slideDown{from{opacity:0;transform:translateY(-12px);}to{opacity:1;transform:translateY(0);}}
+    .ab{animation:slideDown .4s ease;}
+    @keyframes fadeIn{from{opacity:0;transform:translateY(8px);}to{opacity:1;transform:translateY(0);}}
+    .fi{animation:fadeIn .35s ease both;}
+    .mb{background:rgba(15,23,42,.55);backdrop-filter:blur(4px);}
+    @keyframes progressGrow{from{width:0%;}to{width:var(--tw,0%);}}
+    .pb{animation:progressGrow 1.2s cubic-bezier(.4,0,.2,1) both;}
+    .bu{background:#d1fae5;color:#065f46;}
+    .bp{background:#fff7ed;color:#c2410c;}
+    @keyframes spin{to{transform:rotate(360deg);}}
+    .si{animation:spin 1s linear infinite;}
+    .kc{transition:transform .2s ease,box-shadow .2s ease;}
+    .kc:hover{transform:translateY(-3px);box-shadow:0 12px 28px rgba(37,99,235,.12);}
+    @media print{.np{display:none!important;}body{background:white!important;}}
+  </style>
+</head>
+<body class="bg-slate-50 min-h-screen text-slate-800">
+<header class="hg shadow-xl">
+  <div class="max-w-screen-xl mx-auto px-4 sm:px-6 py-5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+    <div class="flex items-center gap-3">
+      <div class="bg-white/20 rounded-xl p-2.5 flex items-center justify-center shadow-inner">
+        <i data-lucide="package" class="w-7 h-7 text-white"></i>
+      </div>
+      <div>
+        <h1 class="text-white font-bold text-lg sm:text-xl leading-tight">JAPA Global</h1>
+        <p class="text-blue-200 text-xs sm:text-sm font-medium">Annual Supplier Purchases Tracker 2026</p>
+      </div>
+    </div>
+    <div class="flex flex-wrap gap-2 np">
+      <button id="btn-refresh" onclick="loadData(true)" class="flex items-center gap-1.5 bg-white/15 hover:bg-white/25 text-white text-sm font-semibold px-4 py-2 rounded-lg transition-all duration-200 border border-white/20 shadow-sm">
+        <i id="icon-refresh" data-lucide="refresh-cw" class="w-4 h-4"></i> Refresh Data
+      </button>
+      <button onclick="exportCSV()" class="flex items-center gap-1.5 bg-white/15 hover:bg-white/25 text-white text-sm font-semibold px-4 py-2 rounded-lg transition-all duration-200 border border-white/20 shadow-sm">
+        <i data-lucide="download" class="w-4 h-4"></i> Export CSV
+      </button>
+      <button onclick="openSettings()" class="flex items-center gap-1.5 bg-white/15 hover:bg-white/25 text-white text-sm font-semibold px-4 py-2 rounded-lg transition-all duration-200 border border-white/20 shadow-sm">
+        <i data-lucide="settings" class="w-4 h-4"></i> Settings
+      </button>
+    </div>
+  </div>
+  <div class="max-w-screen-xl mx-auto px-4 sm:px-6 pb-4">
+    <p class="text-blue-200 text-xs sm:text-sm">Real-time Vendor Spend, Payments &amp; Pending Balances &nbsp;&middot;&nbsp; <span id="last-updated" class="font-medium text-white/80"></span></p>
+  </div>
+</header>
+
+<main class="max-w-screen-xl mx-auto px-4 sm:px-6 py-6 space-y-6">
+  <div id="error-banner" class="hidden bg-red-50 border border-red-200 rounded-xl p-4 flex items-start gap-3 ab">
+    <i data-lucide="alert-circle" class="w-5 h-5 text-red-500 flex-shrink-0 mt-0.5"></i>
+    <div>
+      <p class="font-semibold text-red-700 text-sm">Data fetch failed &mdash; showing cached data</p>
+      <p id="error-detail" class="text-red-500 text-xs mt-0.5"></p>
+    </div>
+    <button onclick="document.getElementById('error-banner').classList.add('hidden')" class="ml-auto text-red-400 hover:text-red-600">
+      <i data-lucide="x" class="w-4 h-4"></i>
+    </button>
+  </div>
+
+  <section class="grid grid-cols-2 lg:grid-cols-4 gap-4">
+    <div class="kc bg-white rounded-2xl shadow-sm border border-slate-100 p-5 flex flex-col gap-2">
+      <div class="flex items-center justify-between">
+        <span class="text-xs font-semibold text-slate-500 uppercase tracking-wide">Total Suppliers</span>
+        <div class="bg-blue-100 rounded-lg p-1.5"><i data-lucide="users" class="w-4 h-4 text-blue-600"></i></div>
+      </div>
+      <div id="kpi-suppliers" class="text-3xl font-extrabold text-slate-800 tabular-nums"><div class="shimmer w-16"></div></div>
+      <p class="text-xs text-slate-400">SUP-001 through SUP-116</p>
+    </div>
+    <div class="kc bg-white rounded-2xl shadow-sm border border-slate-100 p-5 flex flex-col gap-2">
+      <div class="flex items-center justify-between">
+        <span class="text-xs font-semibold text-slate-500 uppercase tracking-wide">Total Purchases</span>
+        <div class="bg-indigo-100 rounded-lg p-1.5"><i data-lucide="shopping-cart" class="w-4 h-4 text-indigo-600"></i></div>
+      </div>
+      <div id="kpi-purchases" class="text-2xl font-extrabold text-slate-800 tabular-nums"><div class="shimmer w-28"></div></div>
+      <p class="text-xs text-slate-400">Annual spend 2026</p>
+    </div>
+    <div class="kc bg-white rounded-2xl shadow-sm border border-slate-100 p-5 flex flex-col gap-2">
+      <div class="flex items-center justify-between">
+        <span class="text-xs font-semibold text-slate-500 uppercase tracking-wide">Total Paid</span>
+        <div class="bg-emerald-100 rounded-lg p-1.5"><i data-lucide="check-circle" class="w-4 h-4 text-emerald-600"></i></div>
+      </div>
+      <div id="kpi-paid" class="text-2xl font-extrabold text-emerald-700 tabular-nums"><div class="shimmer w-28"></div></div>
+      <p class="text-xs text-slate-400">Amount remitted to date</p>
+    </div>
+    <div class="kc bg-white rounded-2xl shadow-sm border border-slate-100 p-5 flex flex-col gap-2">
+      <div class="flex items-center justify-between">
+        <span class="text-xs font-semibold text-slate-500 uppercase tracking-wide">Outstanding</span>
+        <div class="bg-amber-100 rounded-lg p-1.5"><i data-lucide="alert-triangle" class="w-4 h-4 text-amber-600"></i></div>
+      </div>
+      <div id="kpi-outstanding" class="text-2xl font-extrabold tabular-nums text-slate-800"><div class="shimmer w-28"></div></div>
+      <p class="text-xs text-slate-400">Pending / unpaid balance</p>
+    </div>
+  </section>
+
+  <section id="alert-section" class="hidden ab">
+    <div class="bg-amber-50 border border-amber-200 rounded-2xl p-4 shadow-sm">
+      <div class="flex items-center gap-2 mb-3">
+        <i data-lucide="bell-ring" class="w-5 h-5 text-amber-500"></i>
+        <h2 class="font-bold text-amber-800 text-sm uppercase tracking-wide">Pending Balance Alerts</h2>
+        <span id="alert-count" class="ml-auto bg-amber-200 text-amber-800 text-xs font-bold px-2 py-0.5 rounded-full"></span>
+      </div>
+      <div id="alert-list" class="space-y-2"></div>
+    </div>
+  </section>
+
+  <section class="grid grid-cols-1 lg:grid-cols-3 gap-4">
+    <div class="lg:col-span-2 bg-white rounded-2xl shadow-sm border border-slate-100 p-5">
+      <div class="flex items-center justify-between mb-4">
+        <div>
+          <h2 class="font-bold text-slate-800 text-base">Spend Distribution</h2>
+          <p class="text-xs text-slate-400">by Primary Category</p>
+        </div>
+        <div class="bg-blue-50 rounded-lg p-1.5"><i data-lucide="pie-chart" class="w-4 h-4 text-blue-600"></i></div>
+      </div>
+      <div class="flex flex-col sm:flex-row items-center gap-4">
+        <div class="w-56 h-56 flex-shrink-0"><canvas id="spendChart"></canvas></div>
+        <div id="chart-legend" class="flex flex-col gap-2 text-sm flex-1"></div>
+      </div>
+    </div>
+    <div class="bg-white rounded-2xl shadow-sm border border-slate-100 p-5 flex flex-col gap-4">
+      <div class="flex items-center justify-between">
+        <div>
+          <h2 class="font-bold text-slate-800 text-base">Collection Rate</h2>
+          <p class="text-xs text-slate-400">Paid vs. Outstanding</p>
+        </div>
+        <div class="bg-emerald-50 rounded-lg p-1.5"><i data-lucide="trending-up" class="w-4 h-4 text-emerald-600"></i></div>
+      </div>
+      <div>
+        <div class="flex justify-between text-xs text-slate-500 mb-1.5"><span>Paid</span><span id="progress-pct-label">&mdash;</span></div>
+        <div class="w-full bg-slate-100 rounded-full h-4 overflow-hidden">
+          <div id="progress-bar" class="h-4 rounded-full pb" style="--tw:0%;width:0%;background:linear-gradient(90deg,#10b981,#059669);"></div>
+        </div>
+        <div class="flex justify-between text-xs text-slate-400 mt-1"><span id="prog-paid-amt">&mdash;</span><span id="prog-total-amt">of &mdash;</span></div>
+      </div>
+      <div class="mt-auto pt-4 border-t border-slate-100">
+        <p class="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-3">Top Pending Vendors</p>
+        <div id="top-pending-bars" class="space-y-2.5"></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="bg-white rounded-2xl shadow-sm border border-slate-100 p-4 np">
+    <div class="flex flex-col sm:flex-row gap-3 items-start sm:items-center">
+      <div class="relative flex-1 min-w-0">
+        <i data-lucide="search" class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none"></i>
+        <input id="search-input" type="search" placeholder="Search supplier name, ID, or PO ref..." class="w-full pl-9 pr-4 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-transparent transition" oninput="applyFilters()" />
+      </div>
+      <select id="filter-category" class="py-2.5 px-3 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400 transition bg-white min-w-[180px]" onchange="applyFilters()">
+        <option value="">All Categories</option>
+      </select>
+      <select id="filter-status" class="py-2.5 px-3 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400 transition bg-white min-w-[160px]" onchange="applyFilters()">
+        <option value="">All Statuses</option>
+        <option value="Up to Date">Up to Date</option>
+        <option value="Terms / Pending">Terms / Pending</option>
+      </select>
+      <span id="row-count" class="text-xs text-slate-400 whitespace-nowrap"></span>
+    </div>
+  </section>
+
+  <section class="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
+    <div class="overflow-x-auto">
+      <table class="w-full text-sm">
+        <thead>
+          <tr class="bg-slate-50 border-b border-slate-200 text-xs text-slate-500 uppercase tracking-wide">
+            <th class="sh px-4 py-3 text-left" onclick="sortTable(0)">Supplier ID <i data-lucide="chevrons-up-down" class="inline w-3 h-3 ml-0.5 opacity-40"></i></th>
+            <th class="sh px-4 py-3 text-left" onclick="sortTable(1)">Supplier Name <i data-lucide="chevrons-up-down" class="inline w-3 h-3 ml-0.5 opacity-40"></i></th>
+            <th class="px-4 py-3 text-left hidden md:table-cell">Category</th>
+            <th class="px-4 py-3 text-left hidden lg:table-cell">Terms</th>
+            <th class="sh px-4 py-3 text-right" onclick="sortTable(4)">Purchases <i data-lucide="chevrons-up-down" class="inline w-3 h-3 ml-0.5 opacity-40"></i></th>
+            <th class="sh px-4 py-3 text-right hidden sm:table-cell" onclick="sortTable(5)">Paid <i data-lucide="chevrons-up-down" class="inline w-3 h-3 ml-0.5 opacity-40"></i></th>
+            <th class="sh px-4 py-3 text-right" onclick="sortTable(6)">Balance <i data-lucide="chevrons-up-down" class="inline w-3 h-3 ml-0.5 opacity-40"></i></th>
+            <th class="px-4 py-3 text-center">Status</th>
+            <th class="px-4 py-3 text-center np">Actions</th>
+          </tr>
+        </thead>
+        <tbody id="table-body">
+          <tr><td colspan="9" class="px-4 py-12 text-center">
+            <div class="flex flex-col items-center gap-3">
+              <svg class="si w-8 h-8 text-blue-500" fill="none" viewBox="0 0 24 24">
+                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
+                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"/>
+              </svg>
+              <p class="text-slate-400 text-sm">Fetching supplier data...</p>
+            </div>
+          </td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="border-t border-slate-100 px-4 py-3 flex items-center justify-between bg-slate-50">
+      <span id="table-footer-info" class="text-xs text-slate-400"></span>
+      <div class="flex gap-2">
+        <button id="btn-prev" onclick="prevPage()" disabled class="px-3 py-1.5 text-xs rounded-lg border border-slate-200 text-slate-500 hover:bg-slate-100 disabled:opacity-40 disabled:cursor-not-allowed transition">&larr; Prev</button>
+        <span id="page-indicator" class="px-3 py-1.5 text-xs text-slate-600 font-medium"></span>
+        <button id="btn-next" onclick="nextPage()" class="px-3 py-1.5 text-xs rounded-lg border border-slate-200 text-slate-500 hover:bg-slate-100 disabled:opacity-40 disabled:cursor-not-allowed transition">Next &rarr;</button>
+      </div>
+    </div>
+  </section>
+
+  <footer class="text-center text-xs text-slate-400 py-4">
+    JAPA Global Annual Supplier Purchases Tracker 2026 &nbsp;&middot;&nbsp; Built with Antigravity IDE &nbsp;&middot;&nbsp; &copy; <span id="yr"></span> Gain Carlo Cayabyab
+  </footer>
+</main>
+<div id="settings-modal" class="fixed inset-0 z-50 hidden mb flex items-center justify-center p-4">
+  <div class="bg-white rounded-2xl shadow-2xl w-full max-w-lg p-6 fi">
+    <div class="flex items-center justify-between mb-4">
+      <div class="flex items-center gap-2">
+        <i data-lucide="settings" class="w-5 h-5 text-blue-600"></i>
+        <h2 class="font-bold text-slate-800 text-base">Data Source Configuration</h2>
+      </div>
+      <button onclick="closeSettings()" class="text-slate-400 hover:text-slate-600"><i data-lucide="x" class="w-5 h-5"></i></button>
+    </div>
+    <p class="text-xs text-slate-500 mb-3">Paste the direct download CSV/Excel link from OneDrive. Make sure the link ends with <code class="bg-slate-100 px-1 rounded text-slate-700">&amp;download=1</code>.</p>
+    <label class="block text-xs font-semibold text-slate-600 mb-1">OneDrive CSV URL</label>
+    <textarea id="settings-url-input" rows="4" class="w-full border border-slate-200 rounded-xl p-3 text-xs text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-400 resize-none font-mono" placeholder="https://1drv.ms/x/...&download=1"></textarea>
+    <div class="flex gap-3 mt-4 justify-end">
+      <button onclick="closeSettings()" class="px-4 py-2 rounded-xl text-sm text-slate-600 border border-slate-200 hover:bg-slate-50 transition">Cancel</button>
+      <button onclick="saveSettings()" class="px-4 py-2 rounded-xl text-sm font-semibold bg-blue-600 text-white hover:bg-blue-700 transition shadow-sm">Save &amp; Refresh</button>
+    </div>
+  </div>
+</div>
+
+<div id="detail-modal" class="fixed inset-0 z-50 hidden mb flex items-center justify-center p-4">
+  <div class="bg-white rounded-2xl shadow-2xl w-full max-w-md p-6 fi">
+    <div class="flex items-center justify-between mb-4">
+      <h2 id="detail-title" class="font-bold text-slate-800 text-base"></h2>
+      <button onclick="closeDetail()" class="text-slate-400 hover:text-slate-600"><i data-lucide="x" class="w-5 h-5"></i></button>
+    </div>
+    <div id="detail-content" class="space-y-3 text-sm"></div>
+    <div class="mt-5 text-right">
+      <button onclick="closeDetail()" class="px-4 py-2 rounded-xl text-sm bg-blue-600 text-white hover:bg-blue-700 transition font-semibold">Close</button>
+    </div>
+  </div>
+</div>
+<script>
+const CK='japa_suppliers_cache',UK='japa_onedrive_url',PS=20;
+const DU="https://1drv.ms/x/c/b750e9ddb4b03ccf/IQBOPBrUVbipSrm0mYI9GxLaAT6NpZPzqLyd7HVYrNjTtxc?e=ml78jA&download=1";
+let ONEDRIVE_CSV_URL=localStorage.getItem(UK)||DU;
+let allS=[],filtS=[],curP=1,sCol=-1,sAsc=true,chart=null;
+
+function php(v){if(isNaN(v)||v==null)return'\u20B10.00';return'\u20B1'+Number(v).toLocaleString('en-PH',{minimumFractionDigits:2,maximumFractionDigits:2});}
+function cn(v){if(v==null)return 0;return parseFloat(String(v).replace(/[^\d.-]/g,''))||0;}
+function esc(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
+
+function parse(rows){
+  const out=[];
+  for(const r of rows){
+    const id=String(r[0]||'').trim();
+    if(!id.toUpperCase().startsWith('SUP-'))continue;
+    const name=String(r[1]||'').trim();
+    const cat=String(r[2]||'').trim()||'Uncategorized';
+    const terms=String(r[3]||'').trim()||'COD';
+    const pur=cn(r[4]),paid=cn(r[5]);
+    const bal=Math.max(0,pur-paid);
+    const st=bal>0?'Terms / Pending':'Up to Date';
+    const po=String(r[6]||'').trim();
+    out.push({id,name,cat,terms,pur,paid,bal,st,po});
+  }
+  return out;
+}
+
+function renderKPIs(s){
+  const tp=s.reduce((a,r)=>a+r.pur,0);
+  const td=s.reduce((a,r)=>a+r.paid,0);
+  const to=s.reduce((a,r)=>a+r.bal,0);
+  document.getElementById('kpi-suppliers').textContent=s.length;
+  document.getElementById('kpi-purchases').textContent=php(tp);
+  document.getElementById('kpi-paid').textContent=php(td);
+  const o=document.getElementById('kpi-outstanding');
+  o.textContent=php(to);
+  o.className='text-2xl font-extrabold tabular-nums '+(to>0?'text-red-600':'text-emerald-700');
+  const pct=tp>0?(td/tp*100):0;
+  const pb=document.getElementById('progress-bar');
+  pb.style.setProperty('--tw',pct.toFixed(1)+'%');
+  pb.style.width=pct.toFixed(1)+'%';
+  document.getElementById('progress-pct-label').textContent=pct.toFixed(1)+'%';
+  document.getElementById('prog-paid-amt').textContent=php(td);
+  document.getElementById('prog-total-amt').textContent='of '+php(tp);
+}
+
+function renderAlerts(s){
+  const p=s.filter(x=>x.bal>0).sort((a,b)=>b.bal-a.bal).slice(0,5);
+  const sec=document.getElementById('alert-section');
+  if(!p.length){sec.classList.add('hidden');return;}
+  sec.classList.remove('hidden');
+  document.getElementById('alert-count').textContent=p.length+' vendor'+(p.length>1?'s':'');
+  document.getElementById('alert-list').innerHTML=p.map(x=>`
+    <div class="flex flex-col sm:flex-row sm:items-center gap-2 bg-white border border-amber-100 rounded-xl p-3 shadow-sm">
+      <div class="flex-1 min-w-0">
+        <div class="flex items-center gap-2 flex-wrap">
+          <span class="font-bold text-slate-700 text-sm">${esc(x.name)}</span>
+          <span class="text-xs text-slate-400 font-mono">${esc(x.id)}</span>
+          <span class="text-xs bg-slate-100 text-slate-500 px-1.5 py-0.5 rounded">${esc(x.terms)}</span>
+        </div>
+        <p class="text-xs text-slate-500 mt-0.5">${esc(x.cat)}</p>
+      </div>
+      <div class="flex items-center gap-3 flex-shrink-0">
+        <span class="font-extrabold text-red-600 text-sm">${php(x.bal)}</span>
+        <button onclick="openDetail('${esc(x.id)}')" class="text-xs bg-amber-100 hover:bg-amber-200 text-amber-800 font-semibold px-3 py-1.5 rounded-lg transition">View Details</button>
+      </div>
+    </div>`).join('');
+  const mx=p[0]?.bal||1;
+  document.getElementById('top-pending-bars').innerHTML=p.slice(0,3).map(x=>{
+    const pct=(x.bal/mx*100).toFixed(1);
+    const sh=x.name.length>20?x.name.slice(0,18)+'\u2026':x.name;
+    return`<div><div class="flex justify-between text-xs mb-1"><span class="text-slate-600 font-medium truncate max-w-[130px]">${esc(sh)}</span><span class="text-red-600 font-bold">${php(x.bal)}</span></div><div class="w-full bg-slate-100 rounded-full h-2"><div class="h-2 rounded-full bg-gradient-to-r from-amber-400 to-red-500" style="width:${pct}%"></div></div></div>`;
+  }).join('');
+}
+
+function renderChart(s){
+  const cm={};
+  for(const x of s)cm[x.cat]=(cm[x.cat]||0)+x.pur;
+  const sorted=Object.entries(cm).sort((a,b)=>b[1]-a[1]);
+  const top=sorted.slice(0,5);
+  const ot=sorted.slice(5).reduce((a,[,v])=>a+v,0);
+  if(ot>0)top.push(['Others',ot]);
+  const labels=top.map(([k])=>k),data=top.map(([,v])=>v);
+  const PAL=['#3b82f6','#6366f1','#8b5cf6','#ec4899','#f59e0b','#10b981','#14b8a6'];
+  const ctx=document.getElementById('spendChart').getContext('2d');
+  if(chart)chart.destroy();
+  chart=new Chart(ctx,{type:'doughnut',data:{labels,datasets:[{data,backgroundColor:PAL.slice(0,labels.length),borderWidth:2,borderColor:'#fff',hoverOffset:8}]},options:{cutout:'65%',plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>' '+php(c.parsed)}}},animation:{duration:900,easing:'easeInOutQuart'}}});
+  const total=data.reduce((a,v)=>a+v,0);
+  document.getElementById('chart-legend').innerHTML=labels.map((l,i)=>`
+    <div class="flex items-center gap-2.5">
+      <div class="w-3 h-3 rounded-sm flex-shrink-0" style="background:${PAL[i]}"></div>
+      <div class="flex-1 min-w-0">
+        <p class="text-xs font-medium text-slate-700 truncate">${esc(l)}</p>
+        <p class="text-xs text-slate-400">${php(data[i])} &middot; ${(data[i]/total*100).toFixed(1)}%</p>
+      </div>
+    </div>`).join('');
+}
+
+function populateCats(s){
+  const cats=[...new Set(s.map(x=>x.cat))].sort();
+  document.getElementById('filter-category').innerHTML='<option value="">All Categories</option>'+cats.map(c=>`<option value="${esc(c)}">${esc(c)}</option>`).join('');
+}
+
+function applyFilters(){
+  const q=document.getElementById('search-input').value.trim().toLowerCase();
+  const cat=document.getElementById('filter-category').value.toLowerCase();
+  const st=document.getElementById('filter-status').value.toLowerCase();
+  filtS=allS.filter(x=>{
+    const mQ=!q||x.id.toLowerCase().includes(q)||x.name.toLowerCase().includes(q)||x.po.toLowerCase().includes(q);
+    const mC=!cat||x.cat.toLowerCase()===cat;
+    const mS=!st||x.st.toLowerCase()===st;
+    return mQ&&mC&&mS;
+  });
+  curP=1;renderTable();
+}
+
+function sortTable(col){
+  if(sCol===col)sAsc=!sAsc;else{sCol=col;sAsc=true;}
+  const F=['id','name','cat','terms','pur','paid','bal','st'];
+  filtS.sort((a,b)=>{
+    const f=F[col];if(!f)return 0;
+    const va=a[f],vb=b[f];
+    if(typeof va==='number')return sAsc?va-vb:vb-va;
+    return sAsc?String(va).localeCompare(String(vb)):String(vb).localeCompare(String(va));
+  });
+  curP=1;renderTable();
+}
+
+function renderTable(){
+  const tbody=document.getElementById('table-body');
+  const total=filtS.length;
+  const maxP=Math.max(1,Math.ceil(total/PS));
+  if(curP>maxP)curP=maxP;
+  const st=(curP-1)*PS,en=Math.min(st+PS,total),page=filtS.slice(st,en);
+  document.getElementById('row-count').textContent=total+' supplier'+(total!==1?'s':'');
+  document.getElementById('table-footer-info').textContent='Showing '+(st+1)+'\u2013'+en+' of '+total+' suppliers';
+  document.getElementById('page-indicator').textContent='Page '+curP+' / '+maxP;
+  document.getElementById('btn-prev').disabled=curP<=1;
+  document.getElementById('btn-next').disabled=curP>=maxP;
+  if(!page.length){tbody.innerHTML='<tr><td colspan="9" class="px-4 py-12 text-center text-slate-400 text-sm">No suppliers match your search.</td></tr>';return;}
+  tbody.innerHTML=page.map((x,i)=>{
+    const stripe=(st+i)%2===0?'bg-white':'bg-slate-50/60';
+    const bc=x.st==='Up to Date'?'bu':'bp';
+    const blc=x.bal>0?'text-red-600 font-bold':'text-emerald-600 font-semibold';
+    return`<tr class="${stripe} border-b border-slate-100 fi">
+      <td class="px-4 py-3 font-mono text-xs text-slate-500 whitespace-nowrap">${esc(x.id)}</td>
+      <td class="px-4 py-3"><span class="font-semibold text-slate-800">${esc(x.name)}</span>${x.po?`<br/><span class="text-xs text-slate-400 font-mono">${esc(x.po)}</span>`:''}</td>
+      <td class="px-4 py-3 text-slate-500 text-xs hidden md:table-cell max-w-[160px] truncate">${esc(x.cat)}</td>
+      <td class="px-4 py-3 text-slate-500 text-xs hidden lg:table-cell whitespace-nowrap">${esc(x.terms)}</td>
+      <td class="px-4 py-3 text-right text-slate-700 font-medium whitespace-nowrap">${php(x.pur)}</td>
+      <td class="px-4 py-3 text-right text-emerald-600 font-medium whitespace-nowrap hidden sm:table-cell">${php(x.paid)}</td>
+      <td class="px-4 py-3 text-right whitespace-nowrap ${blc}">${php(x.bal)}</td>
+      <td class="px-4 py-3 text-center"><span class="inline-block text-xs font-semibold px-2.5 py-1 rounded-full ${bc}">${esc(x.st)}</span></td>
+      <td class="px-4 py-3 text-center np"><button onclick="openDetail('${esc(x.id)}')" class="text-blue-600 hover:text-blue-800 transition" title="View Details"><i data-lucide="eye" class="w-4 h-4"></i></button></td>
+    </tr>`;
+  }).join('');
+  lucide.createIcons();
+}
+
+function prevPage(){if(curP>1){curP--;renderTable();}}
+function nextPage(){const m=Math.ceil(filtS.length/PS);if(curP<m){curP++;renderTable();}}
+
+function openDetail(id){
+  const x=allS.find(s=>s.id===id);if(!x)return;
+  document.getElementById('detail-title').textContent=x.name;
+  const pct=x.pur>0?(x.paid/x.pur*100).toFixed(1):'0.0';
+  const bb=x.bal>0?'red':'emerald';
+  document.getElementById('detail-content').innerHTML=`
+    <div class="grid grid-cols-2 gap-3">
+      <div class="bg-slate-50 rounded-xl p-3"><p class="text-xs text-slate-400 mb-0.5">Supplier ID</p><p class="font-mono font-bold text-slate-700">${esc(x.id)}</p></div>
+      <div class="bg-slate-50 rounded-xl p-3"><p class="text-xs text-slate-400 mb-0.5">Payment Terms</p><p class="font-semibold text-slate-700">${esc(x.terms)}</p></div>
+      <div class="bg-slate-50 rounded-xl p-3 col-span-2"><p class="text-xs text-slate-400 mb-0.5">Category</p><p class="font-medium text-slate-700">${esc(x.cat)}</p></div>
+    </div>
+    <div class="grid grid-cols-3 gap-3 mt-1">
+      <div class="bg-blue-50 rounded-xl p-3 text-center"><p class="text-xs text-slate-400 mb-0.5">Total Purchases</p><p class="font-extrabold text-blue-700">${php(x.pur)}</p></div>
+      <div class="bg-emerald-50 rounded-xl p-3 text-center"><p class="text-xs text-slate-400 mb-0.5">Total Paid</p><p class="font-extrabold text-emerald-700">${php(x.paid)}</p></div>
+      <div class="bg-${bb}-50 rounded-xl p-3 text-center"><p class="text-xs text-slate-400 mb-0.5">Outstanding</p><p class="font-extrabold text-${bb}-700">${php(x.bal)}</p></div>
+    </div>
+    <div class="mt-2"><div class="flex justify-between text-xs text-slate-500 mb-1"><span>Payment Progress</span><span>${pct}%</span></div><div class="w-full bg-slate-100 rounded-full h-3"><div class="h-3 rounded-full bg-gradient-to-r from-emerald-400 to-emerald-600" style="width:${pct}%"></div></div></div>
+    <div class="flex items-center gap-2 mt-2"><span class="text-xs font-semibold text-slate-500">Status:</span><span class="inline-block text-xs font-bold px-2.5 py-1 rounded-full ${x.st==='Up to Date'?'bu':'bp'}">${esc(x.st)}</span></div>
+    ${x.po?`<div class="bg-slate-50 rounded-xl p-3 mt-1"><p class="text-xs text-slate-400 mb-0.5">PO Reference</p><p class="font-mono text-slate-700 text-xs">${esc(x.po)}</p></div>`:''}
+    <a href="${ONEDRIVE_CSV_URL.split('&download=1')[0]}" target="_blank" rel="noopener" class="flex items-center gap-2 mt-2 text-xs text-blue-600 hover:underline font-semibold">
+      <i data-lucide="external-link" class="w-3.5 h-3.5"></i> View OneDrive Ledger
+    </a>`;
+  document.getElementById('detail-modal').classList.remove('hidden');
+  lucide.createIcons();
+}
+function closeDetail(){document.getElementById('detail-modal').classList.add('hidden');}
+
+function openSettings(){document.getElementById('settings-url-input').value=ONEDRIVE_CSV_URL;document.getElementById('settings-modal').classList.remove('hidden');}
+function closeSettings(){document.getElementById('settings-modal').classList.add('hidden');}
+function saveSettings(){const u=document.getElementById('settings-url-input').value.trim();if(u){ONEDRIVE_CSV_URL=u;localStorage.setItem(UK,u);}closeSettings();loadData(true);}
+
+function exportCSV(){
+  const h=['Supplier ID','Supplier Name','Category','Payment Terms','Total Purchases','Total Paid','Outstanding Balance','Status','PO Ref'];
+  const rows=filtS.map(x=>[x.id,x.name,x.cat,x.terms,x.pur.toFixed(2),x.paid.toFixed(2),x.bal.toFixed(2),x.st,x.po]);
+  const csv=[h,...rows].map(r=>r.map(c=>`"${String(c).replace(/"/g,'""')}"`).join(',')).join('\r\n');
+  const a=document.createElement('a');a.href=URL.createObjectURL(new Blob(['\uFEFF'+csv],{type:'text/csv;charset=utf-8;'}));a.download='japa_suppliers_2026.csv';a.click();
+}
+
+function showError(msg){document.getElementById('error-detail').textContent=msg;document.getElementById('error-banner').classList.remove('hidden');lucide.createIcons();}
+
+async function loadData(force=false){
+  const ri=document.getElementById('icon-refresh');
+  ri.classList.add('si');document.getElementById('btn-refresh').disabled=true;
+  try{
+    if(!force){const c=localStorage.getItem(CK);if(c){allS=JSON.parse(c);finish();ri.classList.remove('si');document.getElementById('btn-refresh').disabled=false;document.getElementById('last-updated').textContent='From cache \u2014 refreshing\u2026';fetchR();return;}}
+    await fetchR();
+  }catch(e){
+    const c=localStorage.getItem(CK);
+    if(c){allS=JSON.parse(c);finish();showError('Could not reach OneDrive. Showing cached data. '+e.message);}
+    else{document.getElementById('table-body').innerHTML='<tr><td colspan="9" class="px-4 py-12 text-center text-red-400 text-sm">Failed to load. Check Settings or network.</td></tr>';}
+  }finally{ri.classList.remove('si');document.getElementById('btn-refresh').disabled=false;}
+}
+
+async function fetchR(){
+  const r=await fetch(ONEDRIVE_CSV_URL,{cache:'no-store'});
+  if(!r.ok)throw new Error('HTTP '+r.status);
+  const txt=await r.text();
+  const res=Papa.parse(txt,{skipEmptyLines:true});
+  allS=parse(res.data.filter(r=>String(r[0]||'').trim().toUpperCase().startsWith('SUP-')));
+  localStorage.setItem(CK,JSON.stringify(allS));
+  finish();
+  document.getElementById('last-updated').textContent='Last updated: '+new Date().toLocaleString('en-PH',{dateStyle:'medium',timeStyle:'short'});
+}
+
+function finish(){
+  filtS=[...allS];
+  renderKPIs(allS);renderAlerts(allS);renderChart(allS);populateCats(allS);applyFilters();lucide.createIcons();
+}
+
+document.getElementById('settings-modal').addEventListener('click',e=>{if(e.target===e.currentTarget)closeSettings();});
+document.getElementById('detail-modal').addEventListener('click',e=>{if(e.target===e.currentTarget)closeDetail();});
+document.getElementById('yr').textContent=new Date().getFullYear();
+lucide.createIcons();
+loadData();
+</script>
+</body>
+</html>
