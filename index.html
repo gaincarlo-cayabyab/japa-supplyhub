@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
@@ -464,24 +464,60 @@ async function loadData(force=false){
   const ri=document.getElementById('icon-refresh');
   ri.classList.add('si');document.getElementById('btn-refresh').disabled=true;
   try{
-    if(!force){const c=localStorage.getItem(CK);if(c){allS=JSON.parse(c);finish();ri.classList.remove('si');document.getElementById('btn-refresh').disabled=false;document.getElementById('last-updated').textContent='From cache \u2014 refreshing\u2026';fetchR();return;}}
+    if(!force){
+      const c=localStorage.getItem(CK);
+      if(c){
+        allS=JSON.parse(c);finish();
+        ri.classList.remove('si');document.getElementById('btn-refresh').disabled=false;
+        document.getElementById('last-updated').textContent='From cache \u2014 refreshing in background\u2026';
+        fetchR().catch(e=>showError('Background refresh failed: '+e.message));
+        return;
+      }
+    }
     await fetchR();
   }catch(e){
     const c=localStorage.getItem(CK);
-    if(c){allS=JSON.parse(c);finish();showError('Could not reach OneDrive. Showing cached data. '+e.message);}
-    else{document.getElementById('table-body').innerHTML='<tr><td colspan="9" class="px-4 py-12 text-center text-red-400 text-sm">Failed to load. Check Settings or network.</td></tr>';}
+    if(c){allS=JSON.parse(c);finish();showError('All fetch attempts failed. Showing cached data. '+e.message);}
+    else{
+      document.getElementById('table-body').innerHTML='<tr><td colspan="9" class="px-4 py-12 text-center text-red-400 text-sm">Failed to load data from all sources. Please check your network or update the OneDrive URL in Settings.</td></tr>';
+      showError(e.message);
+    }
   }finally{ri.classList.remove('si');document.getElementById('btn-refresh').disabled=false;}
 }
 
+// Attempts direct fetch first, then falls back through CORS proxies.
 async function fetchR(){
-  const r=await fetch(ONEDRIVE_CSV_URL,{cache:'no-store'});
-  if(!r.ok)throw new Error('HTTP '+r.status);
-  const txt=await r.text();
-  const res=Papa.parse(txt,{skipEmptyLines:true});
-  allS=parse(res.data.filter(r=>String(r[0]||'').trim().toUpperCase().startsWith('SUP-')));
-  localStorage.setItem(CK,JSON.stringify(allS));
-  finish();
-  document.getElementById('last-updated').textContent='Last updated: '+new Date().toLocaleString('en-PH',{dateStyle:'medium',timeStyle:'short'});
+  const encoded=encodeURIComponent(ONEDRIVE_CSV_URL);
+  const ATTEMPTS=[
+    {label:'Direct',  url:ONEDRIVE_CSV_URL},
+    {label:'CORSProxy', url:'https://corsproxy.io/?'+encoded},
+    {label:'AllOrigins', url:'https://api.allorigins.win/raw?url='+encoded}
+  ];
+
+  let lastErr=null;
+  for(const attempt of ATTEMPTS){
+    try{
+      console.log('[JAPA] Trying fetch via: '+attempt.label);
+      const resp=await fetch(attempt.url,{cache:'no-store'});
+      if(!resp.ok)throw new Error(attempt.label+' HTTP '+resp.status);
+      let txt=await resp.text();
+      // Strip UTF-8 BOM if present
+      txt=txt.replace(/^\uFEFF/,'');
+      const res=Papa.parse(txt,{skipEmptyLines:true,delimiter:','});
+      const rows=res.data.filter(r=>String(r[0]||'').trim().toUpperCase().startsWith('SUP-'));
+      if(!rows.length)throw new Error(attempt.label+' returned no SUP- rows (may be HTML or empty response)');
+      allS=parse(rows);
+      localStorage.setItem(CK,JSON.stringify(allS));
+      finish();
+      const src=attempt.label==='Direct'?'OneDrive':'via '+attempt.label;
+      document.getElementById('last-updated').textContent='Last updated: '+new Date().toLocaleString('en-PH',{dateStyle:'medium',timeStyle:'short'})+' ('+src+')';
+      return; // success — stop trying
+    }catch(e){
+      console.warn('[JAPA] '+attempt.label+' failed:',e.message);
+      lastErr=e;
+    }
+  }
+  throw new Error('All sources failed. Last error: '+(lastErr?lastErr.message:'unknown'));
 }
 
 function finish(){
