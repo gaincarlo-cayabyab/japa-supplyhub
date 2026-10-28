@@ -1,0 +1,117 @@
+Supplier ID,Supplier Name,Category,Payment Terms,Total Purchases,Total Paid,Outstanding Balance,Status
+SUP-001,Tandem Apparel Corp.,Fabrics & Sewing Materials,30 Days,98500.00,98500.00,0.00,Up to Date
+SUP-002,Manchester Textile Marketing,Fabrics & Sewing Materials,30 Days,120000.00,0.00,120000.00,Terms / Pending
+SUP-003,Golden Thread Supplies,Fabrics & Sewing Materials,COD,45200.00,45200.00,0.00,Up to Date
+SUP-004,Xarion Industries,Printing Consumables & Inks,30 Days,286422.68,0.00,286422.68,Terms / Pending
+SUP-005,Printmaster Phil.,Printing Consumables & Inks,COD,72800.00,72800.00,0.00,Up to Date
+SUP-006,Genesis,Plain Shirts,60 Days,52852.50,40000.00,12852.50,Terms / Pending
+SUP-007,Colorex Trading,Printing Consumables & Inks,30 Days,38400.00,38400.00,0.00,Up to Date
+SUP-008,Metro Fabric Hub,Fabrics & Sewing Materials,15 Days,61000.00,61000.00,0.00,Up to Date
+SUP-009,Sunrise Garments,Plain Shirts,COD,29700.00,29700.00,0.00,Up to Date
+SUP-010,Pacific Print Supply,Printing Consumables & Inks,30 Days,54300.00,54300.00,0.00,Up to Date
+SUP-011,Apex Textiles Inc.,Fabrics & Sewing Materials,30 Days,77500.00,77500.00,0.00,Up to Date
+SUP-012,Delta Shirt Factory,Plain Shirts,COD,33600.00,33600.00,0.00,Up to Date
+SUP-013,Brilliant Colors Co.,Print Outsource,30 Days,48900.00,48900.00,0.00,Up to Date
+SUP-014,NorthStar Trading,Fabrics & Sewing Materials,15 Days,22100.00,22100.00,0.00,Up to Date
+SUP-015,Vertex Printing House,Print Outsource,30 Days,91200.00,91200.00,0.00,Up to Date
+SUP-016,Landmark Textiles,Fabrics & Sewing Materials,COD,56700.00,56700.00,0.00,Up to Date
+SUP-017,Pioneer Garment Supplies,Plain Shirts,COD,41500.00,41500.00,0.00,Up to Date
+SUP-018,ChromaLink Inks,Printing Consumables & Inks,30 Days,63400.00,63400.00,0.00,Up to Date
+SUP-019,Stitch & Style Corp.,Fabrics & Sewing Materials,30 Days,34800.00,34800.00,0.00,Up to Date
+SUP-020,FastPrint Solutions,Print Outsource,COD,27600.00,27600.00,0.00,Up to Date
+SUP-021,BlueLine Apparel,Plain Shirts,COD,58200.00,58200.00,0.00,Up to Date
+SUP-022,Rainbow Dye Works,Printing Consumables & Inks,30 Days,44100.00,44100.00,0.00,Up to Date
+SUP-023,Premier Sewing Hub,Fabrics & Sewing Materials,15 Days,31500.00,31500.00,0.00,Up to Date
+SUP-024,TopLine Shirt Co.,Plain Shirts,COD,47800.00,47800.00,0.00,Up to Date
+SUP-025,EastWest Print Corp.,Print Outsource,30 Days,69300.00,69300.00,0.00,Up to Date
+SUP-026,Sunshine Fabrics,Fabrics & Sewing Materials,COD,25400.00,25400.00,0.00,Up to Date
+SUP-027,Atlas Garments,Plain Shirts,COD,36900.00,36900.00,0.00,Up to Date
+SUP-028,QuickInk Supplies,Printing Consumables & Inks,30 Days,52100.00,52100.00,0.00,Up to Date
+SUP-029,GreenLeaf Textiles,Fabrics & Sewing Materials,30 Days,43200.00,43200.00,0.00,Up to Date
+SUP-030,ProPress Printing,Print Outsource,COD,38700.00,38700.00,0.00,Up to Date
+SUP-031,Cardinal Fabrics,Fabrics & Sewing Materials,15 Days,61800.00,61800.00,0.00,Up to Date
+SUP-032,UniShirt Trading,Plain Shirts,COD,29100.00,29100.00,0.00,Up to Date
+SUP-033,VividPrint Corp.,Print Outsource,30 Days,74500.00,74500.00,0.00,Up to Date
+SUP-034,MegaInk Phil.,Printing Consumables & Inks,30 Days,47600.00,47600.00,0.00,Up to Date
+SUP-035,LoomCraft Supplies,Fabrics & Sewing Materials,COD,33100.00,33100.00,0.00,Up to Date
+SUP-036,FreshPrint Studio,Print Outsource,COD,21900.00,21900.00,0.00,Up to Date
+SUP-037,WhiteLine Shirts,Plain Shirts,COD,55300.00,55300.00,0.00,Up to Date
+SUP-038,Omega Dye & Chemical,Printing Consumables & Inks,30 Days,68200.00,68200.00,0.00,Up to Date
+SUP-039,Kaleidoscope Fabrics,Fabrics & Sewing Materials,30 Days,39800.00,39800.00,0.00,Up to Date
+SUP-040,SpeedPrint Partners,Print Outsource,15 Days,57400.00,57400.00,0.00,Up to Date
+SUP-041,AlphaThread Co.,Fabrics & Sewing Materials,COD,28600.00,28600.00,0.00,Up to Date
+SUP-042,PrimeCut Garments,Plain Shirts,COD,42300.00,42300.00,0.00,Up to Date
+SUP-043,TrueColor Inks,Printing Consumables & Inks,30 Days,51800.00,51800.00,0.00,Up to Date
+SUP-044,NexGen Textiles,Fabrics & Sewing Materials,30 Days,64700.00,64700.00,0.00,Up to Date
+SUP-045,BoldPrint Solutions,Print Outsource,COD,35200.00,35200.00,0.00,Up to Date
+SUP-046,SilverStitch Supplies,Fabrics & Sewing Materials,15 Days,22900.00,22900.00,0.00,Up to Date
+SUP-047,EagleShirt Manufacturing,Plain Shirts,COD,48600.00,48600.00,0.00,Up to Date
+SUP-048,InkFlow Trading,Printing Consumables & Inks,30 Days,73100.00,73100.00,0.00,Up to Date
+SUP-049,CrystalWeave Fabrics,Fabrics & Sewing Materials,COD,37400.00,37400.00,0.00,Up to Date
+SUP-050,MaxPrint Corp.,Print Outsource,30 Days,89600.00,89600.00,0.00,Up to Date
+SUP-051,GoldThread Trading,Fabrics & Sewing Materials,30 Days,54100.00,54100.00,0.00,Up to Date
+SUP-052,CleanCut Shirts,Plain Shirts,COD,31800.00,31800.00,0.00,Up to Date
+SUP-053,FlexInk Supply Co.,Printing Consumables & Inks,30 Days,46500.00,46500.00,0.00,Up to Date
+SUP-054,FiberCraft Textiles,Fabrics & Sewing Materials,15 Days,58300.00,58300.00,0.00,Up to Date
+SUP-055,PrintWave Studio,Print Outsource,COD,27800.00,27800.00,0.00,Up to Date
+SUP-056,SkyBlue Apparel,Plain Shirts,COD,44700.00,44700.00,0.00,Up to Date
+SUP-057,PowerInk Philippines,Printing Consumables & Inks,30 Days,62900.00,62900.00,0.00,Up to Date
+SUP-058,Horizon Fabrics,Fabrics & Sewing Materials,COD,36100.00,36100.00,0.00,Up to Date
+SUP-059,QualiPrint Services,Print Outsource,30 Days,71400.00,71400.00,0.00,Up to Date
+SUP-060,IronClad Garments,Plain Shirts,COD,53200.00,53200.00,0.00,Up to Date
+SUP-061,NovaDye Trading,Printing Consumables & Inks,30 Days,49800.00,49800.00,0.00,Up to Date
+SUP-062,TrueWeave Corp.,Fabrics & Sewing Materials,30 Days,67500.00,67500.00,0.00,Up to Date
+SUP-063,StarPrint Studio,Print Outsource,COD,32600.00,32600.00,0.00,Up to Date
+SUP-064,SwiftShirt Mfg.,Plain Shirts,COD,40900.00,40900.00,0.00,Up to Date
+SUP-065,BrightInk Supplies,Printing Consumables & Inks,30 Days,55800.00,55800.00,0.00,Up to Date
+SUP-066,EliteFabrics Phil.,Fabrics & Sewing Materials,15 Days,78200.00,78200.00,0.00,Up to Date
+SUP-067,ClearPrint Partners,Print Outsource,30 Days,43600.00,43600.00,0.00,Up to Date
+SUP-068,ProShirt International,Plain Shirts,COD,59100.00,59100.00,0.00,Up to Date
+SUP-069,SparkInk Corp.,Printing Consumables & Inks,30 Days,37700.00,37700.00,0.00,Up to Date
+SUP-070,LuxeFabric Trading,Fabrics & Sewing Materials,COD,26400.00,26400.00,0.00,Up to Date
+SUP-071,PrimePrint House,Print Outsource,30 Days,84300.00,84300.00,0.00,Up to Date
+SUP-072,BasicWear Mfg.,Plain Shirts,COD,34500.00,34500.00,0.00,Up to Date
+SUP-073,ChromaMax Inks,Printing Consumables & Inks,30 Days,61200.00,61200.00,0.00,Up to Date
+SUP-074,SoftWeave Textiles,Fabrics & Sewing Materials,30 Days,49300.00,49300.00,0.00,Up to Date
+SUP-075,PrintEdge Solutions,Print Outsource,COD,38100.00,38100.00,0.00,Up to Date
+SUP-076,ComfortShirt Co.,Plain Shirts,COD,46800.00,46800.00,0.00,Up to Date
+SUP-077,TurboInk Supply,Printing Consumables & Inks,30 Days,57300.00,57300.00,0.00,Up to Date
+SUP-078,WeaveMaster Fabrics,Fabrics & Sewing Materials,15 Days,71900.00,71900.00,0.00,Up to Date
+SUP-079,EcoPrint Studio,Print Outsource,COD,29500.00,29500.00,0.00,Up to Date
+SUP-080,FreshFit Garments,Plain Shirts,COD,52600.00,52600.00,0.00,Up to Date
+SUP-081,NitroInk Phil.,Printing Consumables & Inks,30 Days,44900.00,44900.00,0.00,Up to Date
+SUP-082,FineLine Fabrics,Fabrics & Sewing Materials,COD,33700.00,33700.00,0.00,Up to Date
+SUP-083,FlashPrint Corp.,Print Outsource,30 Days,67800.00,67800.00,0.00,Up to Date
+SUP-084,CasualWear Supply,Plain Shirts,COD,41100.00,41100.00,0.00,Up to Date
+SUP-085,ProColor Inks,Printing Consumables & Inks,30 Days,53700.00,53700.00,0.00,Up to Date
+SUP-086,NaturalFiber Co.,Fabrics & Sewing Materials,30 Days,62400.00,62400.00,0.00,Up to Date
+SUP-087,NextPrint Services,Print Outsource,COD,36800.00,36800.00,0.00,Up to Date
+SUP-088,SmartShirt Mfg.,Plain Shirts,COD,48200.00,48200.00,0.00,Up to Date
+SUP-089,PureInk Supplies,Printing Consumables & Inks,30 Days,59600.00,59600.00,0.00,Up to Date
+SUP-090,SilkPath Fabrics,Fabrics & Sewing Materials,15 Days,45700.00,45700.00,0.00,Up to Date
+SUP-091,UltraPrint Hub,Print Outsource,30 Days,77100.00,77100.00,0.00,Up to Date
+SUP-092,UrbanShirt Trading,Plain Shirts,COD,32300.00,32300.00,0.00,Up to Date
+SUP-093,DigitalInk Corp.,Printing Consumables & Inks,30 Days,56100.00,56100.00,0.00,Up to Date
+SUP-094,PremierFabrics Inc.,Fabrics & Sewing Materials,COD,69800.00,69800.00,0.00,Up to Date
+SUP-095,ColorBurst Print,Print Outsource,30 Days,42500.00,42500.00,0.00,Up to Date
+SUP-096,ClassicShirt Corp.,Plain Shirts,COD,38900.00,38900.00,0.00,Up to Date
+SUP-097,SharpInk Phil.,Printing Consumables & Inks,30 Days,64300.00,64300.00,0.00,Up to Date
+SUP-098,CottonBridge Fabrics,Fabrics & Sewing Materials,30 Days,51400.00,51400.00,0.00,Up to Date
+SUP-099,DynamicPrint Studio,Print Outsource,COD,35600.00,35600.00,0.00,Up to Date
+SUP-100,TrendyShirt Mfg.,Plain Shirts,COD,55900.00,55900.00,0.00,Up to Date
+SUP-101,InkMaster Supply,Printing Consumables & Inks,30 Days,47200.00,47200.00,0.00,Up to Date
+SUP-102,PureFiber Textiles,Fabrics & Sewing Materials,15 Days,73600.00,73600.00,0.00,Up to Date
+SUP-103,CreativePrint Corp.,Print Outsource,30 Days,39400.00,39400.00,0.00,Up to Date
+SUP-104,StyleShirt Trading,Plain Shirts,COD,44100.00,44100.00,0.00,Up to Date
+SUP-105,VividInk Solutions,Printing Consumables & Inks,30 Days,60700.00,60700.00,0.00,Up to Date
+SUP-106,FlexFabric Phil.,Fabrics & Sewing Materials,COD,37900.00,37900.00,0.00,Up to Date
+SUP-107,PrintMates Studio,Print Outsource,COD,28300.00,28300.00,0.00,Up to Date
+SUP-108,EcoShirt Mfg.,Plain Shirts,COD,50800.00,50800.00,0.00,Up to Date
+SUP-109,ColorPro Inks,Printing Consumables & Inks,30 Days,43800.00,43800.00,0.00,Up to Date
+SUP-110,TechWeave Fabrics,Fabrics & Sewing Materials,30 Days,66200.00,66200.00,0.00,Up to Date
+SUP-111,SwiftPrint Services,Print Outsource,30 Days,31700.00,31700.00,0.00,Up to Date
+SUP-112,BoldShirt Corp.,Plain Shirts,COD,57400.00,57400.00,0.00,Up to Date
+SUP-113,NanoInk Phil.,Printing Consumables & Inks,30 Days,52300.00,52300.00,0.00,Up to Date
+SUP-114,ElegantFabrics Corp.,Fabrics & Sewing Materials,15 Days,48600.00,48600.00,0.00,Up to Date
+SUP-115,MasterPrint House,Print Outsource,30 Days,79400.00,79400.00,0.00,Up to Date
+SUP-116,FreshShirt Supply,Plain Shirts,COD,36200.00,36200.00,0.00,Up to Date

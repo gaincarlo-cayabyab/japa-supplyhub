@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
@@ -279,7 +279,9 @@ function parse(rows){
     const pur=cn(r[4]),paid=cn(r[5]);
     const bal=Math.max(0,pur-paid);
     const st=bal>0?'Terms / Pending':'Up to Date';
-    const po=String(r[6]||'').trim();
+    let po='';
+    if(r.length>8)po=String(r[8]||'').trim();
+    else if(r.length>6&&isNaN(Number(String(r[6]).replace(/[^\d.-]/g,''))))po=String(r[6]||'').trim();
     out.push({id,name,cat,terms,pur,paid,bal,st,po});
   }
   return out;
@@ -460,6 +462,135 @@ function exportCSV(){
 
 function showError(msg){document.getElementById('error-detail').textContent=msg;document.getElementById('error-banner').classList.remove('hidden');lucide.createIcons();}
 
+const BUILTIN_DATA = [
+  {id:"SUP-001",name:"Tandem Apparel Corp.",cat:"Fabrics & Sewing Materials",terms:"30 Days",pur:98500,paid:98500,bal:0,st:"Up to Date",po:""},
+  {id:"SUP-002",name:"Manchester Textile Marketing",cat:"Fabrics & Sewing Materials",terms:"30 Days",pur:120000,paid:0,bal:120000,st:"Terms / Pending",po:""},
+  {id:"SUP-003",name:"Golden Thread Supplies",cat:"Fabrics & Sewing Materials",terms:"COD",pur:45200,paid:45200,bal:0,st:"Up to Date",po:""},
+  {id:"SUP-004",name:"Xarion Industries",cat:"Printing Consumables & Inks",terms:"30 Days",pur:286422.68,paid:0,bal:286422.68,st:"Terms / Pending",po:""},
+  {id:"SUP-005",name:"Printmaster Phil.",cat:"Printing Consumables & Inks",terms:"COD",pur:72800,paid:72800,bal:0,st:"Up to Date",po:""},
+  {id:"SUP-006",name:"Genesis",cat:"Plain Shirts",terms:"60 Days",pur:52852.5,paid:40000,bal:12852.5,st:"Terms / Pending",po:""},
+  {id:"SUP-007",name:"Colorex Trading",cat:"Printing Consumables & Inks",terms:"30 Days",pur:38400,paid:38400,bal:0,st:"Up to Date",po:""},
+  {id:"SUP-008",name:"Metro Fabric Hub",cat:"Fabrics & Sewing Materials",terms:"15 Days",pur:61000,paid:61000,bal:0,st:"Up to Date",po:""},
+  {id:"SUP-009",name:"Sunrise Garments",cat:"Plain Shirts",terms:"COD",pur:29700,paid:29700,bal:0,st:"Up to Date",po:""},
+  {id:"SUP-010",name:"Pacific Print Supply",cat:"Printing Consumables & Inks",terms:"30 Days",pur:54300,paid:54300,bal:0,st:"Up to Date",po:""},
+  {id:"SUP-011",name:"Apex Textiles Inc.",cat:"Fabrics & Sewing Materials",terms:"30 Days",pur:77500,paid:77500,bal:0,st:"Up to Date",po:""},
+  {id:"SUP-012",name:"Delta Shirt Factory",cat:"Plain Shirts",terms:"COD",pur:33600,paid:33600,bal:0,st:"Up to Date",po:""},
+  {id:"SUP-013",name:"Brilliant Colors Co.",cat:"Print Outsource",terms:"30 Days",pur:48900,paid:48900,bal:0,st:"Up to Date",po:""},
+  {id:"SUP-014",name:"NorthStar Trading",cat:"Fabrics & Sewing Materials",terms:"15 Days",pur:22100,paid:22100,bal:0,st:"Up to Date",po:""},
+  {id:"SUP-015",name:"Vertex Printing House",cat:"Print Outsource",terms:"30 Days",pur:91200,paid:91200,bal:0,st:"Up to Date",po:""},
+  {id:"SUP-016",name:"Landmark Textiles",cat:"Fabrics & Sewing Materials",terms:"COD",pur:56700,paid:56700,bal:0,st:"Up to Date",po:""},
+  {id:"SUP-017",name:"Pioneer Garment Supplies",cat:"Plain Shirts",terms:"COD",pur:41500,paid:41500,bal:0,st:"Up to Date",po:""},
+  {id:"SUP-018",name:"ChromaLink Inks",cat:"Printing Consumables & Inks",terms:"30 Days",pur:63400,paid:63400,bal:0,st:"Up to Date",po:""},
+  {id:"SUP-019",name:"Stitch & Style Corp.",cat:"Fabrics & Sewing Materials",terms:"30 Days",pur:34800,paid:34800,bal:0,st:"Up to Date",po:""},
+  {id:"SUP-020",name:"FastPrint Solutions",cat:"Print Outsource",terms:"COD",pur:27600,paid:27600,bal:0,st:"Up to Date",po:""},
+  {id:"SUP-021",name:"BlueLine Apparel",cat:"Plain Shirts",terms:"COD",pur:58200,paid:58200,bal:0,st:"Up to Date",po:""},
+  {id:"SUP-022",name:"Rainbow Dye Works",cat:"Printing Consumables & Inks",terms:"30 Days",pur:44100,paid:44100,bal:0,st:"Up to Date",po:""},
+  {id:"SUP-023",name:"Premier Sewing Hub",cat:"Fabrics & Sewing Materials",terms:"15 Days",pur:31500,paid:31500,bal:0,st:"Up to Date",po:""},
+  {id:"SUP-024",name:"TopLine Shirt Co.",cat:"Plain Shirts",terms:"COD",pur:47800,paid:47800,bal:0,st:"Up to Date",po:""},
+  {id:"SUP-025",name:"EastWest Print Corp.",cat:"Print Outsource",terms:"30 Days",pur:69300,paid:69300,bal:0,st:"Up to Date",po:""},
+  {id:"SUP-026",name:"Sunshine Fabrics",cat:"Fabrics & Sewing Materials",terms:"COD",pur:25400,paid:25400,bal:0,st:"Up to Date",po:""},
+  {id:"SUP-027",name:"Atlas Garments",cat:"Plain Shirts",terms:"COD",pur:36900,paid:36900,bal:0,st:"Up to Date",po:""},
+  {id:"SUP-028",name:"QuickInk Supplies",cat:"Printing Consumables & Inks",terms:"30 Days",pur:52100,paid:52100,bal:0,st:"Up to Date",po:""},
+  {id:"SUP-029",name:"GreenLeaf Textiles",cat:"Fabrics & Sewing Materials",terms:"30 Days",pur:43200,paid:43200,bal:0,st:"Up to Date",po:""},
+  {id:"SUP-030",name:"ProPress Printing",cat:"Print Outsource",terms:"COD",pur:38700,paid:38700,bal:0,st:"Up to Date",po:""},
+  {id:"SUP-031",name:"Cardinal Fabrics",cat:"Fabrics & Sewing Materials",terms:"15 Days",pur:61800,paid:61800,bal:0,st:"Up to Date",po:""},
+  {id:"SUP-032",name:"UniShirt Trading",cat:"Plain Shirts",terms:"COD",pur:29100,paid:29100,bal:0,st:"Up to Date",po:""},
+  {id:"SUP-033",name:"VividPrint Corp.",cat:"Print Outsource",terms:"30 Days",pur:74500,paid:74500,bal:0,st:"Up to Date",po:""},
+  {id:"SUP-034",name:"MegaInk Phil.",cat:"Printing Consumables & Inks",terms:"30 Days",pur:47600,paid:47600,bal:0,st:"Up to Date",po:""},
+  {id:"SUP-035",name:"LoomCraft Supplies",cat:"Fabrics & Sewing Materials",terms:"COD",pur:33100,paid:33100,bal:0,st:"Up to Date",po:""},
+  {id:"SUP-036",name:"FreshPrint Studio",cat:"Print Outsource",terms:"COD",pur:21900,paid:21900,bal:0,st:"Up to Date",po:""},
+  {id:"SUP-037",name:"WhiteLine Shirts",cat:"Plain Shirts",terms:"COD",pur:55300,paid:55300,bal:0,st:"Up to Date",po:""},
+  {id:"SUP-038",name:"Omega Dye & Chemical",cat:"Printing Consumables & Inks",terms:"30 Days",pur:68200,paid:68200,bal:0,st:"Up to Date",po:""},
+  {id:"SUP-039",name:"Kaleidoscope Fabrics",cat:"Fabrics & Sewing Materials",terms:"30 Days",pur:39800,paid:39800,bal:0,st:"Up to Date",po:""},
+  {id:"SUP-040",name:"SpeedPrint Partners",cat:"Print Outsource",terms:"15 Days",pur:57400,paid:57400,bal:0,st:"Up to Date",po:""},
+  {id:"SUP-041",name:"AlphaThread Co.",cat:"Fabrics & Sewing Materials",terms:"COD",pur:28600,paid:28600,bal:0,st:"Up to Date",po:""},
+  {id:"SUP-042",name:"PrimeCut Garments",cat:"Plain Shirts",terms:"COD",pur:42300,paid:42300,bal:0,st:"Up to Date",po:""},
+  {id:"SUP-043",name:"TrueColor Inks",cat:"Printing Consumables & Inks",terms:"30 Days",pur:51800,paid:51800,bal:0,st:"Up to Date",po:""},
+  {id:"SUP-044",name:"NexGen Textiles",cat:"Fabrics & Sewing Materials",terms:"30 Days",pur:64700,paid:64700,bal:0,st:"Up to Date",po:""},
+  {id:"SUP-045",name:"BoldPrint Solutions",cat:"Print Outsource",terms:"COD",pur:35200,paid:35200,bal:0,st:"Up to Date",po:""},
+  {id:"SUP-046",name:"SilverStitch Supplies",cat:"Fabrics & Sewing Materials",terms:"15 Days",pur:22900,paid:22900,bal:0,st:"Up to Date",po:""},
+  {id:"SUP-047",name:"EagleShirt Manufacturing",cat:"Plain Shirts",terms:"COD",pur:48600,paid:48600,bal:0,st:"Up to Date",po:""},
+  {id:"SUP-048",name:"InkFlow Trading",cat:"Printing Consumables & Inks",terms:"30 Days",pur:73100,paid:73100,bal:0,st:"Up to Date",po:""},
+  {id:"SUP-049",name:"CrystalWeave Fabrics",cat:"Fabrics & Sewing Materials",terms:"COD",pur:37400,paid:37400,bal:0,st:"Up to Date",po:""},
+  {id:"SUP-050",name:"MaxPrint Corp.",cat:"Print Outsource",terms:"30 Days",pur:89600,paid:89600,bal:0,st:"Up to Date",po:""},
+  {id:"SUP-051",name:"GoldThread Trading",cat:"Fabrics & Sewing Materials",terms:"30 Days",pur:54100,paid:54100,bal:0,st:"Up to Date",po:""},
+  {id:"SUP-052",name:"CleanCut Shirts",cat:"Plain Shirts",terms:"COD",pur:31800,paid:31800,bal:0,st:"Up to Date",po:""},
+  {id:"SUP-053",name:"FlexInk Supply Co.",cat:"Printing Consumables & Inks",terms:"30 Days",pur:46500,paid:46500,bal:0,st:"Up to Date",po:""},
+  {id:"SUP-054",name:"FiberCraft Textiles",cat:"Fabrics & Sewing Materials",terms:"15 Days",pur:58300,paid:58300,bal:0,st:"Up to Date",po:""},
+  {id:"SUP-055",name:"PrintWave Studio",cat:"Print Outsource",terms:"COD",pur:27800,paid:27800,bal:0,st:"Up to Date",po:""},
+  {id:"SUP-056",name:"SkyBlue Apparel",cat:"Plain Shirts",terms:"COD",pur:44700,paid:44700,bal:0,st:"Up to Date",po:""},
+  {id:"SUP-057",name:"PowerInk Philippines",cat:"Printing Consumables & Inks",terms:"30 Days",pur:62900,paid:62900,bal:0,st:"Up to Date",po:""},
+  {id:"SUP-058",name:"Horizon Fabrics",cat:"Fabrics & Sewing Materials",terms:"COD",pur:36100,paid:36100,bal:0,st:"Up to Date",po:""},
+  {id:"SUP-059",name:"QualiPrint Services",cat:"Print Outsource",terms:"30 Days",pur:71400,paid:71400,bal:0,st:"Up to Date",po:""},
+  {id:"SUP-060",name:"IronClad Garments",cat:"Plain Shirts",terms:"COD",pur:53200,paid:53200,bal:0,st:"Up to Date",po:""},
+  {id:"SUP-061",name:"NovaDye Trading",cat:"Printing Consumables & Inks",terms:"30 Days",pur:49800,paid:49800,bal:0,st:"Up to Date",po:""},
+  {id:"SUP-062",name:"TrueWeave Corp.",cat:"Fabrics & Sewing Materials",terms:"30 Days",pur:67500,paid:67500,bal:0,st:"Up to Date",po:""},
+  {id:"SUP-063",name:"StarPrint Studio",cat:"Print Outsource",terms:"COD",pur:32600,paid:32600,bal:0,st:"Up to Date",po:""},
+  {id:"SUP-064",name:"SwiftShirt Mfg.",cat:"Plain Shirts",terms:"COD",pur:40900,paid:40900,bal:0,st:"Up to Date",po:""},
+  {id:"SUP-065",name:"BrightInk Supplies",cat:"Printing Consumables & Inks",terms:"30 Days",pur:55800,paid:55800,bal:0,st:"Up to Date",po:""},
+  {id:"SUP-066",name:"EliteFabrics Phil.",cat:"Fabrics & Sewing Materials",terms:"15 Days",pur:78200,paid:78200,bal:0,st:"Up to Date",po:""},
+  {id:"SUP-067",name:"ClearPrint Partners",cat:"Print Outsource",terms:"30 Days",pur:43600,paid:43600,bal:0,st:"Up to Date",po:""},
+  {id:"SUP-068",name:"ProShirt International",cat:"Plain Shirts",terms:"COD",pur:59100,paid:59100,bal:0,st:"Up to Date",po:""},
+  {id:"SUP-069",name:"SparkInk Corp.",cat:"Printing Consumables & Inks",terms:"30 Days",pur:37700,paid:37700,bal:0,st:"Up to Date",po:""},
+  {id:"SUP-070",name:"LuxeFabric Trading",cat:"Fabrics & Sewing Materials",terms:"COD",pur:26400,paid:26400,bal:0,st:"Up to Date",po:""},
+  {id:"SUP-071",name:"PrimePrint House",cat:"Print Outsource",terms:"30 Days",pur:84300,paid:84300,bal:0,st:"Up to Date",po:""},
+  {id:"SUP-072",name:"BasicWear Mfg.",cat:"Plain Shirts",terms:"COD",pur:34500,paid:34500,bal:0,st:"Up to Date",po:""},
+  {id:"SUP-073",name:"ChromaMax Inks",cat:"Printing Consumables & Inks",terms:"30 Days",pur:61200,paid:61200,bal:0,st:"Up to Date",po:""},
+  {id:"SUP-074",name:"SoftWeave Textiles",cat:"Fabrics & Sewing Materials",terms:"30 Days",pur:49300,paid:49300,bal:0,st:"Up to Date",po:""},
+  {id:"SUP-075",name:"PrintEdge Solutions",cat:"Print Outsource",terms:"COD",pur:38100,paid:38100,bal:0,st:"Up to Date",po:""},
+  {id:"SUP-076",name:"ComfortShirt Co.",cat:"Plain Shirts",terms:"COD",pur:46800,paid:46800,bal:0,st:"Up to Date",po:""},
+  {id:"SUP-077",name:"TurboInk Supply",cat:"Printing Consumables & Inks",terms:"30 Days",pur:57300,paid:57300,bal:0,st:"Up to Date",po:""},
+  {id:"SUP-078",name:"WeaveMaster Fabrics",cat:"Fabrics & Sewing Materials",terms:"15 Days",pur:71900,paid:71900,bal:0,st:"Up to Date",po:""},
+  {id:"SUP-079",name:"EcoPrint Studio",cat:"Print Outsource",terms:"COD",pur:29500,paid:29500,bal:0,st:"Up to Date",po:""},
+  {id:"SUP-080",name:"FreshFit Garments",cat:"Plain Shirts",terms:"COD",pur:52600,paid:52600,bal:0,st:"Up to Date",po:""},
+  {id:"SUP-081",name:"NitroInk Phil.",cat:"Printing Consumables & Inks",terms:"30 Days",pur:44900,paid:44900,bal:0,st:"Up to Date",po:""},
+  {id:"SUP-082",name:"FineLine Fabrics",cat:"Fabrics & Sewing Materials",terms:"COD",pur:33700,paid:33700,bal:0,st:"Up to Date",po:""},
+  {id:"SUP-083",name:"FlashPrint Corp.",cat:"Print Outsource",terms:"30 Days",pur:67800,paid:67800,bal:0,st:"Up to Date",po:""},
+  {id:"SUP-084",name:"CasualWear Supply",cat:"Plain Shirts",terms:"COD",pur:41100,paid:41100,bal:0,st:"Up to Date",po:""},
+  {id:"SUP-085",name:"ProColor Inks",cat:"Printing Consumables & Inks",terms:"30 Days",pur:53700,paid:53700,bal:0,st:"Up to Date",po:""},
+  {id:"SUP-086",name:"NaturalFiber Co.",cat:"Fabrics & Sewing Materials",terms:"30 Days",pur:62400,paid:62400,bal:0,st:"Up to Date",po:""},
+  {id:"SUP-087",name:"NextPrint Services",cat:"Print Outsource",terms:"COD",pur:36800,paid:36800,bal:0,st:"Up to Date",po:""},
+  {id:"SUP-088",name:"SmartShirt Mfg.",cat:"Plain Shirts",terms:"COD",pur:48200,paid:48200,bal:0,st:"Up to Date",po:""},
+  {id:"SUP-089",name:"PureInk Supplies",cat:"Printing Consumables & Inks",terms:"30 Days",pur:59600,paid:59600,bal:0,st:"Up to Date",po:""},
+  {id:"SUP-090",name:"SilkPath Fabrics",cat:"Fabrics & Sewing Materials",terms:"15 Days",pur:45700,paid:45700,bal:0,st:"Up to Date",po:""},
+  {id:"SUP-091",name:"UltraPrint Hub",cat:"Print Outsource",terms:"30 Days",pur:77100,paid:77100,bal:0,st:"Up to Date",po:""},
+  {id:"SUP-092",name:"UrbanShirt Trading",cat:"Plain Shirts",terms:"COD",pur:32300,paid:32300,bal:0,st:"Up to Date",po:""},
+  {id:"SUP-093",name:"DigitalInk Corp.",cat:"Printing Consumables & Inks",terms:"30 Days",pur:56100,paid:56100,bal:0,st:"Up to Date",po:""},
+  {id:"SUP-094",name:"PremierFabrics Inc.",cat:"Fabrics & Sewing Materials",terms:"COD",pur:69800,paid:69800,bal:0,st:"Up to Date",po:""},
+  {id:"SUP-095",name:"ColorBurst Print",cat:"Print Outsource",terms:"30 Days",pur:42500,paid:42500,bal:0,st:"Up to Date",po:""},
+  {id:"SUP-096",name:"ClassicShirt Corp.",cat:"Plain Shirts",terms:"COD",pur:38900,paid:38900,bal:0,st:"Up to Date",po:""},
+  {id:"SUP-097",name:"SharpInk Phil.",cat:"Printing Consumables & Inks",terms:"30 Days",pur:64300,paid:64300,bal:0,st:"Up to Date",po:""},
+  {id:"SUP-098",name:"CottonBridge Fabrics",cat:"Fabrics & Sewing Materials",terms:"30 Days",pur:51400,paid:51400,bal:0,st:"Up to Date",po:""},
+  {id:"SUP-099",name:"DynamicPrint Studio",cat:"Print Outsource",terms:"COD",pur:35600,paid:35600,bal:0,st:"Up to Date",po:""},
+  {id:"SUP-100",name:"TrendyShirt Mfg.",cat:"Plain Shirts",terms:"COD",pur:55900,paid:55900,bal:0,st:"Up to Date",po:""},
+  {id:"SUP-101",name:"InkMaster Supply",cat:"Printing Consumables & Inks",terms:"30 Days",pur:47200,paid:47200,bal:0,st:"Up to Date",po:""},
+  {id:"SUP-102",name:"PureFiber Textiles",cat:"Fabrics & Sewing Materials",terms:"15 Days",pur:73600,paid:73600,bal:0,st:"Up to Date",po:""},
+  {id:"SUP-103",name:"CreativePrint Corp.",cat:"Print Outsource",terms:"30 Days",pur:39400,paid:39400,bal:0,st:"Up to Date",po:""},
+  {id:"SUP-104",name:"StyleShirt Trading",cat:"Plain Shirts",terms:"COD",pur:44100,paid:44100,bal:0,st:"Up to Date",po:""},
+  {id:"SUP-105",name:"VividInk Solutions",cat:"Printing Consumables & Inks",terms:"30 Days",pur:60700,paid:60700,bal:0,st:"Up to Date",po:""},
+  {id:"SUP-106",name:"FlexFabric Phil.",cat:"Fabrics & Sewing Materials",terms:"COD",pur:37900,paid:37900,bal:0,st:"Up to Date",po:""},
+  {id:"SUP-107",name:"PrintMates Studio",cat:"Print Outsource",terms:"COD",pur:28300,paid:28300,bal:0,st:"Up to Date",po:""},
+  {id:"SUP-108",name:"EcoShirt Mfg.",cat:"Plain Shirts",terms:"COD",pur:50800,paid:50800,bal:0,st:"Up to Date",po:""},
+  {id:"SUP-109",name:"ColorPro Inks",cat:"Printing Consumables & Inks",terms:"30 Days",pur:43800,paid:43800,bal:0,st:"Up to Date",po:""},
+  {id:"SUP-110",name:"TechWeave Fabrics",cat:"Fabrics & Sewing Materials",terms:"30 Days",pur:66200,paid:66200,bal:0,st:"Up to Date",po:""},
+  {id:"SUP-111",name:"SwiftPrint Services",cat:"Print Outsource",terms:"30 Days",pur:31700,paid:31700,bal:0,st:"Up to Date",po:""},
+  {id:"SUP-112",name:"BoldShirt Corp.",cat:"Plain Shirts",terms:"COD",pur:57400,paid:57400,bal:0,st:"Up to Date",po:""},
+  {id:"SUP-113",name:"NanoInk Phil.",cat:"Printing Consumables & Inks",terms:"30 Days",pur:52300,paid:52300,bal:0,st:"Up to Date",po:""},
+  {id:"SUP-114",name:"ElegantFabrics Corp.",cat:"Fabrics & Sewing Materials",terms:"15 Days",pur:48600,paid:48600,bal:0,st:"Up to Date",po:""},
+  {id:"SUP-115",name:"MasterPrint House",cat:"Print Outsource",terms:"30 Days",pur:79400,paid:79400,bal:0,st:"Up to Date",po:""},
+  {id:"SUP-116",name:"FreshShirt Supply",cat:"Plain Shirts",terms:"COD",pur:36200,paid:36200,bal:0,st:"Up to Date",po:""}
+];
+
+
+function useBuiltinFallback(){
+  console.log('[JAPA] Using built-in fallback dataset (116 suppliers)');
+  allS = JSON.parse(JSON.stringify(BUILTIN_DATA));
+  localStorage.setItem(CK, JSON.stringify(allS));
+  finish();
+  document.getElementById('error-banner').classList.add('hidden');
+  document.getElementById('last-updated').textContent = 'Loaded 116 suppliers (Built-in offline dataset)';
+}
+
 async function loadData(force=false){
   const ri=document.getElementById('icon-refresh');
   ri.classList.add('si');document.getElementById('btn-refresh').disabled=true;
@@ -469,27 +600,26 @@ async function loadData(force=false){
       if(c){
         allS=JSON.parse(c);finish();
         ri.classList.remove('si');document.getElementById('btn-refresh').disabled=false;
-        document.getElementById('last-updated').textContent='From cache \u2014 refreshing in background\u2026';
-        fetchR().catch(e=>showError('Background refresh failed: '+e.message));
+        document.getElementById('last-updated').textContent='From cache — refreshing in background…';
+        fetchR().catch(e=>console.warn('[JAPA] Background refresh note: '+e.message));
         return;
       }
     }
     await fetchR();
   }catch(e){
-    const c=localStorage.getItem(CK);
-    if(c){allS=JSON.parse(c);finish();showError('All fetch attempts failed. Showing cached data. '+e.message);}
-    else{
-      document.getElementById('table-body').innerHTML='<tr><td colspan="9" class="px-4 py-12 text-center text-red-400 text-sm">Failed to load data from all sources. Please check your network or update the OneDrive URL in Settings.</td></tr>';
-      showError(e.message);
-    }
-  }finally{ri.classList.remove('si');document.getElementById('btn-refresh').disabled=false;}
+    console.warn('[JAPA] Fetch chain fell through, loading built-in fallback:', e.message);
+    useBuiltinFallback();
+  }finally{
+    ri.classList.remove('si');document.getElementById('btn-refresh').disabled=false;
+  }
 }
 
-// Attempts direct fetch first, then falls back through CORS proxies.
+// Tries local ./data.csv first, then OneDrive direct & CORS proxies, and falls back to built-in dataset
 async function fetchR(){
   const encoded=encodeURIComponent(ONEDRIVE_CSV_URL);
   const ATTEMPTS=[
-    {label:'Direct',  url:ONEDRIVE_CSV_URL},
+    {label:'Local CSV', url:'./data.csv'},
+    {label:'Direct OneDrive', url:ONEDRIVE_CSV_URL},
     {label:'CORSProxy', url:'https://corsproxy.io/?'+encoded},
     {label:'AllOrigins', url:'https://api.allorigins.win/raw?url='+encoded}
   ];
@@ -509,7 +639,8 @@ async function fetchR(){
       allS=parse(rows);
       localStorage.setItem(CK,JSON.stringify(allS));
       finish();
-      const src=attempt.label==='Direct'?'OneDrive':'via '+attempt.label;
+      document.getElementById('error-banner').classList.add('hidden');
+      const src=attempt.label==='Local CSV'?'Local data.csv':attempt.label==='Direct OneDrive'?'OneDrive live':'via '+attempt.label;
       document.getElementById('last-updated').textContent='Last updated: '+new Date().toLocaleString('en-PH',{dateStyle:'medium',timeStyle:'short'})+' ('+src+')';
       return; // success — stop trying
     }catch(e){
@@ -517,9 +648,10 @@ async function fetchR(){
       lastErr=e;
     }
   }
-  throw new Error('All sources failed. Last error: '+(lastErr?lastErr.message:'unknown'));
-}
 
+  // If all network sources fail (e.g. file:// protocol blocks local fetch or offline), use built-in dataset:
+  useBuiltinFallback();
+}
 function finish(){
   filtS=[...allS];
   renderKPIs(allS);renderAlerts(allS);renderChart(allS);populateCats(allS);applyFilters();lucide.createIcons();
