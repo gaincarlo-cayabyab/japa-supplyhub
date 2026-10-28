@@ -1,0 +1,24 @@
+name: Sync OneDrive Excel
+
+on:
+  schedule:
+    - cron: '*/15 * * * *' # Automatically checks OneDrive every 15 minutes
+  workflow_dispatch:       # Allows you to trigger it manually anytime on GitHub
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Download Live OneDrive Excel File
+        run: |
+          curl -L -s -o data.xlsx "https://1drv.ms/x/c/b750e9ddb4b03ccf/IQROPBrUVbipSrm0mYI9GxLaAYEstguxy_U5EDf55zibvgw?download=1"
+
+      - name: Commit and Push Updated File
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+          git add data.xlsx
+          git diff --staged --quiet || (git commit -m "Auto-sync live OneDrive spreadsheet" && git push)

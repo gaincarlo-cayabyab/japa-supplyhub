@@ -953,12 +953,13 @@ async function loadData(force=false){
   }
 }
 
-// Fetches Live OneDrive Excel (.xlsx) directly via CORSProxy and parses with SheetJS
+// Fetches auto-synced ./data.xlsx first (committed by GitHub Action), then falls back to CORSProxy
 async function fetchR(){
   const inputUrl=ONEDRIVE_URL||RAW_ONEDRIVE_URL;
   const cleanUrl=inputUrl.replace(/^https?:\/\/(corsproxy\.io\/\?|api\.allorigins\.win\/raw\?url=)/i,'');
 
   const ATTEMPTS=[
+    {label:'Local data.xlsx', url:'./data.xlsx'},
     {label:'CORSProxy', url:'https://corsproxy.io/?'+encodeURIComponent(cleanUrl)},
     {label:'AllOrigins', url:'https://api.allorigins.win/raw?url='+encodeURIComponent(cleanUrl)},
     {label:'Direct OneDrive', url:cleanUrl}
@@ -967,28 +968,34 @@ async function fetchR(){
   let lastErr=null;
   for(const attempt of ATTEMPTS){
     try{
-      console.log('[JAPA] Trying live sync via: '+attempt.label);
+      console.log('[JAPA] Trying: '+attempt.label);
       const resp=await fetch(attempt.url,{cache:'no-store'});
       if(!resp.ok)throw new Error(attempt.label+' HTTP '+resp.status);
 
       const buffer=await resp.arrayBuffer();
+
+      // Guard: reject tiny responses that are HTML error pages, not real Excel files
+      if(buffer.byteLength<1024){
+        const sniff=new TextDecoder('utf-8').decode(buffer.slice(0,64)).trim().toLowerCase();
+        if(sniff.startsWith('<'))throw new Error(attempt.label+' returned HTML ('+buffer.byteLength+' bytes), not a valid .xlsx');
+      }
+
       const workbook=XLSX.read(new Uint8Array(buffer),{type:'array'});
 
+      // Populate window.workbookSheets with all tabs
       window.workbookSheets={};
       for(const name of workbook.SheetNames){
         window.workbookSheets[name]=XLSX.utils.sheet_to_json(workbook.Sheets[name],{header:1});
       }
 
+      // Find the master/overview sheet; fall back to whichever has the most SUP- rows
       let masterName=workbook.SheetNames.find(n=>/master|all\s*combined/i.test(n))||workbook.SheetNames[0];
       let masterRows=window.workbookSheets[masterName]||[];
       let supRows=masterRows.filter(r=>String(r[0]||'').trim().toUpperCase().startsWith('SUP-'));
       if(!supRows.length){
         for(const n of workbook.SheetNames){
           const sRows=(window.workbookSheets[n]||[]).filter(r=>String(r[0]||'').trim().toUpperCase().startsWith('SUP-'));
-          if(sRows.length>supRows.length){
-            supRows=sRows;
-            masterName=n;
-          }
+          if(sRows.length>supRows.length){supRows=sRows;masterName=n;}
         }
       }
 
@@ -998,16 +1005,16 @@ async function fetchR(){
       localStorage.setItem(CK,JSON.stringify(allS));
       finish();
       document.getElementById('error-banner').classList.add('hidden');
-      document.getElementById('last-updated').textContent='Live Sync: OneDrive Excel';
-      console.log(`[JAPA] Live Sync successful! Loaded ${allS.length} suppliers across ${workbook.SheetNames.length} tabs.`);
-      return; // success — stop trying
+      document.getElementById('last-updated').textContent='Live Sync: OneDrive Excel (Auto-Synced)';
+      console.log(`[JAPA] ${attempt.label} — loaded ${allS.length} suppliers across ${workbook.SheetNames.length} tabs.`);
+      return; // success — stop trying further
     }catch(e){
       console.warn('[JAPA] '+attempt.label+' failed:',e.message);
       lastErr=e;
     }
   }
 
-  // If live network requests fail (e.g. offline, or restricted network), use built-in dataset:
+  // All attempts failed — use built-in 116-supplier dataset so dashboard is never broken
   useBuiltinFallback();
 }
 
