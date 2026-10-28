@@ -953,15 +953,18 @@ async function loadData(force=false){
   }
 }
 
-// Fetches auto-synced ./data.xlsx first (committed by GitHub Action), then falls back to CORSProxy
+// Primary: fetch auto-synced ./data.xlsx (committed by GitHub Action every 15 min)
+// Fallbacks: CORSProxy → AllOrigins → Direct OneDrive → Built-in dataset
 async function fetchR(){
   const inputUrl=ONEDRIVE_URL||RAW_ONEDRIVE_URL;
   const cleanUrl=inputUrl.replace(/^https?:\/\/(corsproxy\.io\/\?|api\.allorigins\.win\/raw\?url=)/i,'');
 
   const ATTEMPTS=[
+    // 1. Auto-synced local file (GitHub Action writes this every 15 min)
     {label:'Local data.xlsx', url:'./data.xlsx'},
-    {label:'CORSProxy', url:'https://corsproxy.io/?'+encodeURIComponent(cleanUrl)},
-    {label:'AllOrigins', url:'https://api.allorigins.win/raw?url='+encodeURIComponent(cleanUrl)},
+    // 2-4. Live remote fallbacks (used when local file is absent or not yet synced)
+    {label:'CORSProxy',       url:'https://corsproxy.io/?'+encodeURIComponent(cleanUrl)},
+    {label:'AllOrigins',      url:'https://api.allorigins.win/raw?url='+encodeURIComponent(cleanUrl)},
     {label:'Direct OneDrive', url:cleanUrl}
   ];
 
@@ -969,29 +972,33 @@ async function fetchR(){
   for(const attempt of ATTEMPTS){
     try{
       console.log('[JAPA] Trying: '+attempt.label);
+
+      // Step 1 — fetch the binary
       const resp=await fetch(attempt.url,{cache:'no-store'});
       if(!resp.ok)throw new Error(attempt.label+' HTTP '+resp.status);
-
       const buffer=await resp.arrayBuffer();
 
-      // Guard: reject tiny responses that are HTML error pages, not real Excel files
+      // Step 2 — guard against HTML error pages (e.g. blocked OneDrive, 404 HTML)
       if(buffer.byteLength<1024){
         const sniff=new TextDecoder('utf-8').decode(buffer.slice(0,64)).trim().toLowerCase();
-        if(sniff.startsWith('<'))throw new Error(attempt.label+' returned HTML ('+buffer.byteLength+' bytes), not a valid .xlsx');
+        if(sniff.startsWith('<'))throw new Error(attempt.label+' returned HTML ('+buffer.byteLength+' bytes) — not a valid .xlsx');
       }
 
+      // Step 3 — parse the full workbook with SheetJS
       const workbook=XLSX.read(new Uint8Array(buffer),{type:'array'});
 
-      // Populate window.workbookSheets with all tabs
+      // Step 4 — store every worksheet so the Tab Selector dropdown can show them all
       window.workbookSheets={};
       for(const name of workbook.SheetNames){
         window.workbookSheets[name]=XLSX.utils.sheet_to_json(workbook.Sheets[name],{header:1});
       }
+      console.log('[JAPA] Tabs found: '+workbook.SheetNames.join(', '));
 
-      // Find the master/overview sheet; fall back to whichever has the most SUP- rows
+      // Step 5 — find master/overview sheet (contains SUP-xxx rows for KPI cards)
       let masterName=workbook.SheetNames.find(n=>/master|all\s*combined/i.test(n))||workbook.SheetNames[0];
       let masterRows=window.workbookSheets[masterName]||[];
       let supRows=masterRows.filter(r=>String(r[0]||'').trim().toUpperCase().startsWith('SUP-'));
+      // If no SUP- rows in the first sheet, scan all sheets and pick the richest one
       if(!supRows.length){
         for(const n of workbook.SheetNames){
           const sRows=(window.workbookSheets[n]||[]).filter(r=>String(r[0]||'').trim().toUpperCase().startsWith('SUP-'));
@@ -999,22 +1006,24 @@ async function fetchR(){
         }
       }
 
-      if(!supRows.length)throw new Error(attempt.label+' returned no valid SUP- supplier rows');
+      if(!supRows.length)throw new Error(attempt.label+' — workbook has no SUP-xxx supplier rows');
 
+      // Step 6 — parse KPI data, cache, render, and update the UI
       allS=parse(supRows);
       localStorage.setItem(CK,JSON.stringify(allS));
-      finish();
+      finish(); // calls populateSheetSelector() → fills #sheet-selector with all tab names
       document.getElementById('error-banner').classList.add('hidden');
-      document.getElementById('last-updated').textContent='Live Sync: OneDrive Excel (Auto-Synced)';
-      console.log(`[JAPA] ${attempt.label} — loaded ${allS.length} suppliers across ${workbook.SheetNames.length} tabs.`);
-      return; // success — stop trying further
+      document.getElementById('last-updated').textContent='Live Sync: OneDrive Excel (Auto-Synced via GitHub)';
+      console.log('[JAPA] '+attempt.label+' — loaded '+allS.length+' suppliers across '+workbook.SheetNames.length+' tabs.');
+      return; // success
     }catch(e){
-      console.warn('[JAPA] '+attempt.label+' failed:',e.message);
+      console.warn('[JAPA] '+attempt.label+' failed: '+e.message);
       lastErr=e;
     }
   }
 
-  // All attempts failed — use built-in 116-supplier dataset so dashboard is never broken
+  // All fetch attempts failed — show built-in 116-supplier dataset so dashboard is never broken
+  console.warn('[JAPA] All fetch attempts failed. Using built-in fallback dataset.');
   useBuiltinFallback();
 }
 
